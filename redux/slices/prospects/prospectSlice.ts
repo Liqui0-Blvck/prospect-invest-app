@@ -155,10 +155,12 @@ export const addLeadsToFirestore = createAsyncThunk<
           console.error('Error al agregar lead a Firestore:', error.message);
           errors.push({ message: error.message, lead });
           dispatch(ADD_FAILED_LEADS());
+          
         }
       } else {
         console.warn(`El lead con el email ${lead.email} ya existe en el sistema.`);
         dispatch(ADD_FAILED_LEADS());
+
         errors.push({
           message: `El lead con el email ${lead.email} ya existe en el sistema.`,
           lead,
@@ -259,6 +261,10 @@ const prospectsSlice = createSlice({
     ADD_FAILED_LEADS: (state) => {
       state.failedLeads += 1;
     },
+    RESET_LEADS_COUNT: (state) => {
+      state.successFullLeads = 0;
+      state.failedLeads = 0;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -293,6 +299,7 @@ export const {
   ADD_NOTAS,
   ADD_SUCCESSFUL_LEADS,
   ADD_FAILED_LEADS,
+  RESET_LEADS_COUNT
 } = prospectsSlice.actions;
 
 export default prospectsSlice.reducer;

@@ -1,3 +1,5 @@
+import { ColorsNative } from '@/constants/Colors';
+import { useSubmitButton } from '@/hooks/useSubmitButton';
 import { login, rememberMeAction } from '@/redux/slices/auth/authSlice';
 import { RootState, useAppDispatch, useAppSelector } from '@/redux/store';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
@@ -6,6 +8,8 @@ import { useFormik } from 'formik';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+
 
 const Login = () => {
   const { user, loading, error, rememberMe } = useAppSelector((state: RootState) => state.auth);
@@ -16,6 +20,9 @@ const Login = () => {
   const BottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['25%', '50%'], []);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+
+  
+  const { isSubmitting, handleSubmit } = useSubmitButton();
   
   
 
@@ -35,25 +42,25 @@ const Login = () => {
     onSubmit: async (values) => {
       const { email, password } = values;
   
-      try {
-        // Intentar iniciar sesión
-        const result = await dispatch(login({ email, password })) // Aquí se agrega el campo rememberMe si es necesario
-          .unwrap();
-  
-        if (result) {
-          // Si el login es exitoso (es decir, el usuario es válido)
-          setShowBottomSheet(true);  // Mostrar el modal (BottomSheet)
-        } else {
-          // Manejar el caso donde el login no es exitoso (aunque es raro si no hubo error)
-          console.log("Login fallido, sin errores aparentes");
+      handleSubmit(async () => {
+        try {
+          // Intentar iniciar sesión
+          const result = await dispatch(login({ email, password })) // Aquí se agrega el campo rememberMe si es necesario
+            .unwrap();
+    
+          if (result) {
+            setShowBottomSheet(true);  // Mostrar el modal (BottomSheet)
+          } else {
+            console.log("Login fallido, sin errores aparentes");
+          }
+        } catch (err) {
+          // Mostrar un mensaje de error si la autenticación falla
+          console.log('Error durante el login:', err);
+        } finally {
+          // Resetear el formulario independientemente del resultado
+          formik.resetForm();
         }
-      } catch (err) {
-        // Mostrar un mensaje de error si la autenticación falla
-        console.log('Error durante el login:', err);
-      } finally {
-        // Resetear el formulario independientemente del resultado
-        formik.resetForm();
-      }
+      })
     },
   });
   
@@ -97,9 +104,9 @@ const Login = () => {
             formik.handleSubmit()
             Keyboard.dismiss()
           }} // Enviar el formulario
-          disabled={loading}
+          disabled={isSubmitting}
         >
-          <Text style={styles.buttonText}>{loading ? 'Cargando...' : 'Iniciar Sesión'}</Text>
+          <Text style={styles.buttonText}>{isSubmitting ? 'Cargando...' : 'Iniciar Sesión'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.outlineButton}
@@ -215,18 +222,19 @@ const styles = StyleSheet.create({
   buttonGroup: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     width: '100%',
   },
   optionButton: {
-    marginHorizontal: 10,
     padding: 15,
-    backgroundColor: '#4a90e2',
+    backgroundColor: 'black',
     borderRadius: 5,
     width: '45%',
   },
   optionButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   errorText: {
     color: 'red',

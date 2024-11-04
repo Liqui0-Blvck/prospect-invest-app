@@ -40,6 +40,11 @@ export const ColorsNative = {
   text: {
     100: '#FFFFFF',
     200: '#e0e0e0',
+    300: '#9e9e9e',
+    400: '#616161',
+    500: '#424242',
+    600: '#212121',
+    
   },
   background: {
     100: '#0D1F2D',
