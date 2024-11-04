@@ -2,14 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Dimensions, Pressable } from 'react-native';
 import { useSelector } from 'react-redux';
-import { RootState, useAppDispatch } from '@/redux/store';
+import { RootState, useAppDispatch, useAppSelector } from '@/redux/store';
 import { Link, useGlobalSearchParams, useNavigation} from 'expo-router';
 import { ScrollView } from 'react-native-gesture-handler';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Lead } from '@/types/Leads';
 //@ts-ignore
 import call from 'react-native-phone-call';
-import { getNotesByLead } from '@/redux/slices/prospects/prospectSlice';
+import { getLead, getNotesByLead } from '@/redux/slices/prospects/prospectSlice';
 import CallConfirmationModal from './CallConfirmationModal';
 import { ColorsNative } from '@/constants/Colors';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -18,8 +18,25 @@ import { Notes } from '@/types/Notes';
 import { addInteraction, getInteractionsLead } from '@/redux/slices/interactions/interactionSlice';
 import InteractionList from '@/components/leadsComponents/Interaction';
 import NotesList from '@/components/leadsComponents/leadNotes';
+import SlideBarButtons from '@/components/leadsComponents/SlideBarButtons';
+import { OptionType } from '@/types/OptionType';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 
+const buttons = [
+  {
+    title: 'General',
+    id: 'general',
+  },
+  {
+    title: 'Inversiones',
+    id: 'inversiones',
+  },
+  {
+    title: 'Estrategias',
+    id: 'estrategias',
+  },
+];
 
 
 export const generateUID = () => {
@@ -29,31 +46,79 @@ export const generateUID = () => {
 
 const { height } = Dimensions.get('window');
 
-interface LeadDetailProps {
-  route: {
-    params: {
-      id: string;
-    };
-  };
-}
-
-const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [currentLead, setCurrentLead] = useState<Lead | null>(null)
-  const { interactions, loading: loadingInteracion } = useSelector((state: RootState) => state.interactions);
-  const { id } = useGlobalSearchParams()
-  const { leads, notes, loading: loadingNotes } = useSelector((state: RootState) => state.lead);
-  const { user } = useSelector((state: RootState) => state.auth);
-  const lead = leads.find((lead) => lead.id === id);
-  const today = new Date();
-
-  const [noteModal, setNoteModal] = useState(false)
-
-  const [noteSelected, setNoteSelected] = useState<Notes | null>(null)
+const LeadDetail = () => {
+  // Estados de opciones
+  const [selectedOption, setSelectedOption] = useState<OptionType>(OptionType.General);
+  const fadeAnim = useSharedValue(0);
+  const translateYAnim = useSharedValue(20);
 
   const dispatch = useAppDispatch();
   const navigation = useNavigation()
 
+
+  // Obtener el id del lead
+  const { id } = useGlobalSearchParams()
+
+  // Obtener al prospecto
+  const { lead } = useAppSelector((state: RootState) => state.lead)
+
+  useEffect(() => {
+    if (id){
+      dispatch(getLead(id));
+    }
+  }, [id])
+
+  console.log("que chucha soy", lead)
+
+
+  const { interactions, loading: loadingInteracion } = useSelector((state: RootState) => state.interactions);
+  const { leads, notes, loading: loadingNotes } = useSelector((state: RootState) => state.lead);
+  const { user } = useSelector((state: RootState) => state.auth);
+  // const lead = leads.find((lead) => lead.id === id);
+
+
+
+  // Estados de llamada
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Estados de notas
+  const [noteModal, setNoteModal] = useState(false)
+  const [noteSelected, setNoteSelected] = useState<Notes | null>(null)
+
+
+
+
+
+
+  const handleSelectOption = (option: OptionType) => {
+    setSelectedOption(option);
+  };
+
+
+
+
+
+  // Animaciones
+  useEffect(() => {
+    if (selectedOption === OptionType.General) {
+      fadeAnim.value = withTiming(1, { duration: 400 });
+      translateYAnim.value = withTiming(0, { duration: 400 });
+    } else {
+      fadeAnim.value = withTiming(0, { duration: 400 });
+      translateYAnim.value = withTiming(20, { duration: 400 });
+    }
+  }, [selectedOption]);
+
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [{ translateY: translateYAnim.value }],
+  }));
+
+
+
+
+  // Obtener interacciones y notas
   useEffect(() => {
     dispatch(getInteractionsLead({ userID: user?.uid!, leadID: id }));
   }, [])
@@ -63,9 +128,7 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
   }, [])
 
 
-  // console.log(user)
-
-
+  // Configuración de la barra de navegación
   useEffect(() => {
     navigation.setOptions({ 
       headerShown: true,
@@ -79,6 +142,9 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
     });
   }, [navigation]);
 
+
+
+  // Función para realizar llamada
   const handleCall = (lead: Lead) => {
     const args = {
       number: lead.numeroTelefono,
@@ -86,7 +152,6 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
     };
 
     call(args).then(() => {
-      setCurrentLead(lead); // Guardar el lead para registrar la interacción tras la confirmación
       setModalVisible(true); // Mostrar el modal después de la llamada
     }).catch(console.error);
   };
@@ -95,15 +160,16 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
 
 
 
-
+  // Función para confirmar la llamada
   const handleConfirm = (result: string) => {
-    if (currentLead) {
+    if (lead) {
+      const today = new Date();
       const uid = generateUID();
       if (result === 'successful') {
         console.log('Llamada completada correctamente');
         dispatch(addInteraction({
           uid: uid,
-          leadID: currentLead?.id!,
+          leadID: lead?.id!,
           userID: user?.uid!,
           fecha: today.toISOString(),
           tipo: 'llamada',
@@ -113,7 +179,7 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
         console.log('Llamada no completada');
         dispatch(addInteraction({
           uid: uid,
-          leadID: currentLead?.id!,
+          leadID: lead?.id!,
           userID: user?.uid!,
           fecha: today.toISOString(),
           tipo: 'llamada fallida',
@@ -167,19 +233,26 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
           </View>
         </ScrollView>
 
-        <View style={styles.interationsContainer}>
-          <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Historial de interacciones</Text>
-          <ScrollView nestedScrollEnabled={true} style={styles.interactionCard}>
-            <InteractionList interactions={interactions} id={id} loadingInteracion={loadingInteracion} />
-          </ScrollView>
-        </View>
 
-        <View style={styles.notesContainer}>
-          <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Notas</Text>
-          <ScrollView nestedScrollEnabled={true} style={styles.notesCard} contentContainerStyle={{ paddingBottom: 20}}>
-            <NotesList notes={notes} leadID={id} setNoteSelected={setNoteSelected} setNoteModal={setNoteModal} userID={user?.uid!} loading={loadingNotes} />
-          </ScrollView>
-        </View>
+        <SlideBarButtons selectedOption={selectedOption} onSelect={handleSelectOption} />
+
+        {selectedOption === OptionType.General && (
+          <>
+            <Animated.View style={[styles.interationsContainer, animatedStyle]}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Historial de interacciones</Text>
+              <ScrollView nestedScrollEnabled={true} style={styles.interactionCard}>
+                <InteractionList interactions={interactions} id={id} loadingInteracion={loadingInteracion} />
+              </ScrollView>
+            </Animated.View>
+
+            <Animated.View style={[styles.notesContainer, animatedStyle]}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Notas</Text>
+              <ScrollView nestedScrollEnabled={true} style={styles.notesCard} contentContainerStyle={{ paddingBottom: 20}}>
+                <NotesList notes={notes} leadID={id} setNoteSelected={setNoteSelected} setNoteModal={setNoteModal} userID={user?.uid!} loading={loadingNotes} />
+              </ScrollView>
+            </Animated.View>
+          </>
+        )}
      </ScrollView>
       
      <CallConfirmationModal

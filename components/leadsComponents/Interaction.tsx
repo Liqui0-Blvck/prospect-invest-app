@@ -17,33 +17,38 @@ interface InteractionProps {
   loadingInteracion: boolean;
 }
 
+
+
 const InteractionList: FC<InteractionProps> = ({ interactions, id, loadingInteracion }) => {
+  if (loadingInteracion) {
+    return (
+      <>
+        {Array(3).fill(0).map((_, index) => (
+          <View key={index} style={styles.interactionItem}>
+            <SkeletonCard />
+          </View>
+        ))}
+      </>
+    );
+  }
+
   return (
-    interactions.length <= 0
-      ? (
-        <Text style={{ textAlign: 'center' }}>No hay interacciones</Text>
-      )
-      : (
-        <>
-          {loadingInteracion ? (
-            // Mostrar varias tarjetas "skeleton" mientras se cargan los datos
-            Array(3).fill(0).map((_, index) => <SkeletonCard key={index} />)
-          ) : (
-            interactions
-              .filter((inter) => inter.leadID === id)
-              .map(({ fecha, tipo, notas }, index) => (
-                <View key={index} style={styles.interactionItem}>
-                  <Text style={styles.interactionTitle}>
-                    {fecha.toLocaleString()} - {tipo}
-                  </Text>
-                  <Text style={styles.interactionDescription}>
-                    {notas}
-                  </Text>
-                </View>
-              ))
-          )}
-        </>
-      )
+    <>
+      {
+      interactions
+      .filter((inter) => inter.leadID === id)
+      .map(({ fecha, tipo, notas }, index) => (
+        <View key={index} style={styles.interactionItem}>
+          <Text style={styles.interactionTitle}>
+            {fecha.toLocaleString()} - {tipo}
+          </Text>
+          <Text style={styles.interactionDescription}>
+            {notas}
+          </Text>
+        </View>
+        ))
+      }
+    </>
   );
 };
 

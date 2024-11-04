@@ -5,7 +5,7 @@ import { Lead } from '@/types/Leads';
 import { Evento } from '@/types/Eventos';
 import { Interaction } from '@/types/Interacciones';
 import { Notes } from '@/types/Notes';
-import { collection, query, where, getDocs, deleteDoc, doc, addDoc, startAfter, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, orderBy , addDoc, startAfter, limit } from 'firebase/firestore';
 
 interface PaginationInfo {
   id?: string;
@@ -55,20 +55,59 @@ const initialState: ProspectsState = {
   hasMore: true,
 };
 
+
+export const getLead = createAsyncThunk<Lead, string | string[], { rejectValue: string }>(
+  'prospects/getLeadByLeadId',
+  async (leadID, { rejectWithValue }) => {
+    try {
+      const leadRef = collection(firestoreService, 'prospects');
+      const q = query(leadRef, where('id', '==', leadID));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        console.warn(`No se encontró ningún lead con leadId: ${leadID}`);
+        return rejectWithValue('El lead no existe.');
+      }
+
+      const lead = querySnapshot.docs[0].data() as Lead;
+      return { ...lead, id: querySnapshot.docs[0].id }; // Incluye el ID del documento en el resultado
+    } catch (error: any) {
+      console.error(`Error al obtener el lead con leadId ${leadID}:`, error);
+      return rejectWithValue('Error al obtener el lead.');
+    }
+  }
+);
+
+
 // Fetch de leads
 export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
   'prospects/fetchLeads',
   async ({ search, pageSize, append, filters }, { getState, rejectWithValue }) => {
     try {
       const leadsRef = collection(firestoreService, 'prospects');
-      let q = query(leadsRef, where('nombre', '>=', search || ''), limit(pageSize));
+      // Inicializar la consulta ordenada
+      let q = query(
+        leadsRef,
+        orderBy('nombre'),
+        orderBy('fechaCreacion', 'desc'),
+        limit(pageSize)
+      );
 
+      // Aplicar filtro de búsqueda si existe
+      if (search) {
+        q = query(q, where('nombre', '>=', search));
+      }
+
+      // Aplicar filtros adicionales si existen
       if (filters && filters.length > 0) {
         q = query(q, where('estado', 'in', filters.slice(0, 10)));
       }
 
+      // Obtener el estado actual para manejar la paginación
       const state = getState() as RootState;
-      const lastVisible = state.lead.lastVisible;
+      const lastVisible = state.lead.lastVisible; // Asegúrate de que la ruta sea correcta
+
+      // Paginación usando `startAfter` con valores correctos
       if (append && lastVisible) {
         q = query(q, startAfter(lastVisible.nombre, lastVisible.fechaCreacion));
       }
@@ -79,6 +118,7 @@ export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
         ...doc.data(),
       })) as Lead[];
 
+      // Obtener el último documento visible para la paginación
       const lastDoc = snapshot.docs[snapshot.docs.length - 1];
       const newLastVisible = lastDoc
         ? { nombre: lastDoc.get('nombre'), fechaCreacion: lastDoc.get('fechaCreacion') }
@@ -276,6 +316,18 @@ const prospectsSlice = createSlice({
       .addCase(getNotesByLead.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(getLead.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getLead.fulfilled, (state, action: PayloadAction<Lead>) => {
+        state.loading = false;
+        state.lead = action.payload;
+      })
+      .addCase(getLead.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Error al obtener el lead.';
       });
   },
 });
