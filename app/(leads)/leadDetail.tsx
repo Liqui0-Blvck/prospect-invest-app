@@ -1,24 +1,25 @@
 // screens/LeadDetail.tsx
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Dimensions, Pressable } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
+import { useSelector } from 'react-redux';
+import { RootState, useAppDispatch } from '@/redux/store';
 import { Link, useGlobalSearchParams, useNavigation} from 'expo-router';
 import { ScrollView } from 'react-native-gesture-handler';
-import { interacciones } from '@/mocks/leads';
 import Entypo from '@expo/vector-icons/Entypo';
-import {Linking} from 'react-native'
 import { Lead } from '@/types/Leads';
 //@ts-ignore
 import call from 'react-native-phone-call';
-import { ADD_INTERACTION } from '@/redux/slices/prospects/prospectSlice';
+import { getNotesByLead } from '@/redux/slices/prospects/prospectSlice';
 import CallConfirmationModal from './CallConfirmationModal';
 import { ColorsNative } from '@/constants/Colors';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import BottomSheet from '@/components/BottomSheet';
-import LeadNotes from '@/components/leadsComponents/leadNotes';
 import NoteDetailModal from './NoteDetailModal';
 import { Notes } from '@/types/Notes';
+import { addInteraction, getInteractionsLead } from '@/redux/slices/interactions/interactionSlice';
+import InteractionList from '@/components/leadsComponents/Interaction';
+import NotesList from '@/components/leadsComponents/leadNotes';
+
+
 
 
 export const generateUID = () => {
@@ -39,21 +40,31 @@ interface LeadDetailProps {
 const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null)
+  const { interactions, loading: loadingInteracion } = useSelector((state: RootState) => state.interactions);
   const { id } = useGlobalSearchParams()
-  const { leads, interacciones, notas } = useSelector((state: RootState) => state.lead);
+  const { leads, notes, loading: loadingNotes } = useSelector((state: RootState) => state.lead);
   const { user } = useSelector((state: RootState) => state.auth);
   const lead = leads.find((lead) => lead.id === id);
   const today = new Date();
 
-
-  const [buttonModal, setButtonModal] = useState(false)
   const [noteModal, setNoteModal] = useState(false)
 
   const [noteSelected, setNoteSelected] = useState<Notes | null>(null)
 
-  const dispatch = useDispatch();
-
+  const dispatch = useAppDispatch();
   const navigation = useNavigation()
+
+  useEffect(() => {
+    dispatch(getInteractionsLead({ userID: user?.uid!, leadID: id }));
+  }, [])
+
+  useEffect(() => {
+    dispatch(getNotesByLead({ leadID: id, userID: user?.uid! }));
+  }, [])
+
+
+  // console.log(user)
+
 
   useEffect(() => {
     navigation.setOptions({ 
@@ -83,14 +94,14 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
 
 
 
-  console.log("currentLead", id)
+
 
   const handleConfirm = (result: string) => {
     if (currentLead) {
       const uid = generateUID();
       if (result === 'successful') {
         console.log('Llamada completada correctamente');
-        dispatch(ADD_INTERACTION({
+        dispatch(addInteraction({
           uid: uid,
           leadID: currentLead?.id!,
           userID: user?.uid!,
@@ -100,7 +111,7 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
         }));
       } else {
         console.log('Llamada no completada');
-        dispatch(ADD_INTERACTION({
+        dispatch(addInteraction({
           uid: uid,
           leadID: currentLead?.id!,
           userID: user?.uid!,
@@ -124,17 +135,7 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.buttonsContainer}>
-            <Pressable onPress={() => {
-              handleCall(lead!);
-              dispatch(ADD_INTERACTION({
-                uid: generateUID(),
-                leadID: currentLead?.id!,
-                userID: user?.uid!,
-                fecha: today.toISOString(),
-                tipo: 'llamada fallida',
-                notas: 'El usuario no completó la llamada'
-              }));
-            }}>
+            <Pressable onPress={() => {handleCall(lead!)}}>
               <View style={[styles.buttons, { backgroundColor: '#0a8967' }]}>
                 <Entypo name="phone" size={30} color="white" />
               </View>
@@ -169,65 +170,23 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ route }) => {
         <View style={styles.interationsContainer}>
           <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Historial de interacciones</Text>
           <ScrollView nestedScrollEnabled={true} style={styles.interactionCard}>
-            {
-              interacciones.filter((inter) => inter.leadID === id).map(({ fecha, tipo, notas }, index) => (
-                <View key={index} style={styles.interactionItem}>
-                  <Text style={styles.interactionTitle}>
-                    {fecha.toString()} - {tipo}
-                  </Text>
-                  <Text style={styles.interactionDescription}>
-                    {notas}
-                  </Text>
-                </View>
-              ))
-            }
+            <InteractionList interactions={interactions} id={id} loadingInteracion={loadingInteracion} />
           </ScrollView>
         </View>
 
         <View style={styles.notesContainer}>
           <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Notas</Text>
           <ScrollView nestedScrollEnabled={true} style={styles.notesCard} contentContainerStyle={{ paddingBottom: 20}}>
-            {
-              notas.filter((inter) => inter.leadId === id).map(({ title, content, date, leadId  }, index) => (
-                
-                <View key={index}>
-                  <Pressable style={styles.notesItem} onPress={() => {
-                    setNoteSelected({ title, content, date, leadId })
-                    setNoteModal(true)
-                  }}>
-                    <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between'}}>
-                      <Text style={{ fontSize: 20, fontWeight: 'bold'}}>
-                        {title}
-                      </Text>
-
-                      <Text style={styles.notesTitle}>
-                        {date?.toString()}
-                      </Text>
-                    </View>
-                    <Text style={styles.notesDescription}>
-                      {content}
-                    </Text>
-                  </Pressable>
-
-
-                </View>
-              ))
-            }
+            <NotesList notes={notes} leadID={id} setNoteSelected={setNoteSelected} setNoteModal={setNoteModal} userID={user?.uid!} loading={loadingNotes} />
           </ScrollView>
         </View>
      </ScrollView>
+      
      <CallConfirmationModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onConfirm={handleConfirm}
       />
-
-      {/* <BottomSheet
-        isOpen={buttonModal}
-        setIsOpen={setButtonModal}
-        >
-          <LeadNotes setIsOpen={setButtonModal}/>
-      </BottomSheet> */}
 
       <NoteDetailModal
         visible={noteModal}
@@ -279,7 +238,7 @@ const styles = StyleSheet.create({
   },
   interationsContainer: {
     width: '100%',
-    height: height / 3,
+    height: height / 2.8,
     gap: 10,
     marginTop: 20,
   },
@@ -290,22 +249,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 5,
   },
-  interactionItem: {
-    backgroundColor: 'white',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-    flexDirection: 'column',
-  },
-  interactionTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  interactionDescription: {
-    fontSize: 12,
-    color: '#555',
-  },
   notesContainer: {
     width: '100%',
     height: height / 2,
@@ -315,9 +258,9 @@ const styles = StyleSheet.create({
   notesCard: {
     width: '100%',
     backgroundColor: '#F3F3F3',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
   },
   notesItem: {
     backgroundColor: '#FFFFFF',

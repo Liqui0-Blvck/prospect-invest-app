@@ -1,60 +1,73 @@
 import { isFirebaseInitialized } from '@/firebase';
 import { loadUserFromStorageThunk } from '@/redux/slices/auth/authSlice';
 import { RootState, useAppDispatch } from '@/redux/store';
-import { useNavigation, usePathname, useRouter } from 'expo-router';
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, Button, View } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { useSelector } from 'react-redux';
-
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 const App = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
   const dispatch = useAppDispatch();
-  const [loading, setLoading] = useState(true)
- 
+  const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
     if (!isFirebaseInitialized) {
       console.log('Firebase no ha sido inicializado correctamente');
-      setLoading(false);  // Finaliza la carga si Firebase no está inicializado
+      setLoading(false);
     } else {
-      dispatch(loadUserFromStorageThunk()).finally(() => setLoading(false));
+      dispatch(loadUserFromStorageThunk())
+        .finally(() => setLoading(false));
     }
   }, []);
+
+  // Escuchar el estado de autenticación en Firebase
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Usuario autenticado encontrado
+        dispatch(loadUserFromStorageThunk());
+      } else {
+        // No hay usuario autenticado
+        setLoading(false);
+      }
+    });
   
+    return () => unsubscribe();
+  }, [dispatch]);
+  
+
   useEffect(() => {
     if (!loading && isAuthenticated) {
       router.replace('/(tabs)/');
     }
   }, [loading, isAuthenticated]);
 
-  // Configurar el encabezado
   useEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   }, [navigation]);
-  
 
   const handleContinue = () => {
-      router.replace('/auth/login'); // Redirigir al login si no está autenticado
+    router.replace('/auth/login');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Invest Lead</Text>
-      {!user
-        ? (
-          <TouchableOpacity onPress={handleContinue} style={styles.button}>
-            <View>
-              <Text>Continuar</Text>
-            </View>
-          </TouchableOpacity>
-        )
-        : null
-      }
+      {!user && (
+        <TouchableOpacity onPress={handleContinue} style={styles.button}>
+          <View>
+            <Text>Continuar</Text>
+          </View>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };

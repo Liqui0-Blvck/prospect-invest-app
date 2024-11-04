@@ -1,117 +1,76 @@
-import React, { Dispatch, SetStateAction } from 'react';
-import { StyleSheet, View, TextInput, Button, Text, Pressable } from 'react-native';
-import { useFormik } from 'formik';
-import { useDispatch } from 'react-redux';
-import { ColorsNative } from '@/constants/Colors';
-import { ADD_NOTAS } from '@/redux/slices/prospects/prospectSlice';
-import { useGlobalSearchParams, useNavigation } from 'expo-router';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import NoteItem from './NoteItem';
+import { Notes } from '@/types/Notes';
 
+interface NotesListProps {
+  notes: Notes[];
+  leadID: string | string[];
+  setNoteSelected: (note: Notes) => void;
+  setNoteModal: (visible: boolean) => void;
+  userID: string;
+  loading: boolean;
+}
 
-const LeadNotes = () => {
-  const dispatch = useDispatch();
-  const { id } = useGlobalSearchParams();
-  const navigator = useNavigation()
+const SkeletonNote = () => {
+  return (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonTitle} />
+      <View style={styles.skeletonContent} />
+    </View>
+  );
+};
 
-
-  const formik = useFormik({
-    initialValues: {
-      title: '',
-      content: '',
-      date: new Date().toISOString().slice(0, 10),
-    },
-    onSubmit: (values, { resetForm }) => {
-      // Aquí puedes enviar los valores a Firebase
-      dispatch(ADD_NOTAS({
-        id: Math.random().toString(36).substring(7),
-        title: values.title,
-        content: values.content,
-        date: values.date,
-        leadId: id,
-        creatorId: '1', 
-      }));
-      navigator.goBack();
-      resetForm(); 
-    },
-  });
-
-
+const NotesList: React.FC<NotesListProps> = ({ notes, leadID, setNoteSelected, setNoteModal, userID, loading }) => {
   return (
     <View style={styles.container}>
-      <View style={{ marginTop: 20 }}>
-        <Text style={styles.label}>Título</Text>
-        <TextInput
-          style={styles.input}
-          onChangeText={formik.handleChange('title')}
-          onBlur={formik.handleBlur('title')}
-          value={formik.values.title}
-        />
-        {formik.touched.title && formik.errors.title ? (
-          <Text style={styles.error}>{formik.errors.title}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Contenido</Text>
-        <TextInput
-          style={styles.textArea}
-          numberOfLines={5}
-          textAlignVertical='top'
-          onChangeText={formik.handleChange('content')}
-          onBlur={formik.handleBlur('content')}
-          value={formik.values.content}
-        />
-        {formik.touched.content && formik.errors.content ? (
-          <Text style={styles.error}>{formik.errors.content}</Text>
-        ) : null}
-
-        {/* <Button onPress={() => formik.handleSubmit()} title="Agregar Nota" /> */}
-          <Pressable
-            style={[styles.button, { backgroundColor: ColorsNative.primary[100] }] }
-            onPress={() => formik.handleSubmit()}
-          >
-            <Text style={{ color: 'white', fontSize: 16 }}>Agregar Nota</Text>
-          </Pressable>
-      </View>
+       {loading ? (
+        // Muestra 3 skeletons cuando loadingNotes es true
+        Array(3).fill(0).map((_, index) => <SkeletonNote key={index} />)
+      ) : (
+        notes
+          .filter((note) => note.leadID === leadID)
+          .map((note, index) => (
+            <NoteItem
+              key={index}
+              note={{ ...note, userID }}
+              onPress={() => {
+                setNoteSelected({ ...note, userID });
+                setNoteModal(true);
+              }}
+            />
+          ))
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    borderRadius: 10,
+    padding: 2,
   },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: ColorsNative.background[100],
-  },
-  input: {
+  skeletonContainer: {
+    width: '100%',
+    backgroundColor: '#e0e0e0',
+    padding: 15,
+    marginVertical: 8,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: ColorsNative.background[100],
-    borderRadius: 5,
-    color: ColorsNative.background[100],
-    padding: 10,
-    marginBottom: 15,
+    borderColor: '#d4d4d4',
   },
-  textArea: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-    color: ColorsNative.background[100],
-    height: 120,
+  skeletonTitle: {
+    width: '50%',
+    height: 20,
+    backgroundColor: '#ccc',
+    borderRadius: 4,
+    marginBottom: 8,
   },
-  error: {
-    color: 'red',
-    fontSize: 12,
-  },
-  button: {
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
+  skeletonContent: {
+    width: '80%',
+    height: 15,
+    backgroundColor: '#ccc',
+    borderRadius: 4,
   },
 });
 
-export default LeadNotes;
+export default NotesList;

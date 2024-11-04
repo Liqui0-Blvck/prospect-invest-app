@@ -1,9 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
 import { FirebaseError } from 'firebase/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth } from '@/firebase';
+import { auth } from '@/firebase'; // Asegúrate de que el auth aquí esté configurado con initializeAuth
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 // Define el estado inicial
 interface AuthState {
@@ -22,7 +21,7 @@ interface SerializableUser {
   phoneNumber: string | null;
 }
 
-const getSerializableUser = (user: firebase.User | null): SerializableUser | null => {
+const getSerializableUser = (user: any): SerializableUser | null => {
   if (!user) return null;
   return {
     uid: user.uid,
@@ -38,7 +37,7 @@ const initialState: AuthState = {
   loading: false,
   error: null,
   isAuthenticated: false,
-  rememberMe: false, // Inicializa como false
+  rememberMe: false,
 };
 
 // Define las credenciales
@@ -48,61 +47,70 @@ interface Credentials {
 }
 
 // Función para guardar el estado en AsyncStorage
-const saveUserToStorage = async (user: SerializableUser | null, rememberMe: boolean) => {
-  if (rememberMe && user) {
+const saveUserToStorage = async (user: SerializableUser | null) => {
+  if (user) {
     await AsyncStorage.setItem('user', JSON.stringify(user));
   }
 };
 
 // Función para cargar el usuario desde AsyncStorage
-const loadUserFromStorage = async () => {
+const loadUserFromStorage = async (): Promise<SerializableUser | null> => {
   const user = await AsyncStorage.getItem('user');
   return user ? JSON.parse(user) : null;
+};
+
+// Función para eliminar el usuario de AsyncStorage en el logout
+const removeUserFromStorage = async () => {
+  await AsyncStorage.removeItem('user');
 };
 
 // Login
 export const login = createAsyncThunk<SerializableUser | null, Credentials, { rejectValue: string }>(
   'auth/login',
-  async (credentials, { rejectWithValue }) => {
+  async (credentials, { rejectWithValue, dispatch }) => {
     try {
-      const userCredential = await auth.signInWithEmailAndPassword(
-        credentials.email,
-        credentials.password
-      );
+      const auth = getAuth(); // Obtener la instancia de auth
+      const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
       const user = getSerializableUser(userCredential.user);
+
+      // Guardar usuario en AsyncStorage si rememberMe está activado
+      if (user) {
+        await saveUserToStorage(user);
+        dispatch(rememberMeAction(true)); // Actualizar el estado de rememberMe
+      }
+
       return user;
     } catch (error: FirebaseError | any) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-// Función asíncrona para el registro
-export const register = createAsyncThunk<SerializableUser | null, Credentials, { rejectValue: string }>(
-  'auth/register',
-  async (credentials, { rejectWithValue }) => {
-    try {
-      const userCredential = await auth.createUserWithEmailAndPassword(
-        credentials.email,
-        credentials.password
-      );
-      return getSerializableUser(userCredential.user);
-    } catch (error: FirebaseError | any) {
-      return rejectWithValue(error.message);
+      const errorMessage = error?.message || 'Error desconocido al iniciar sesión';
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
+// Registro
+export const register = createAsyncThunk<SerializableUser | null, Credentials, { rejectValue: string }>(
+  'auth/register',
+  async (credentials, { rejectWithValue }) => {
+    try {
+      const auth = getAuth();
+      const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
+      return getSerializableUser(userCredential.user);
+    } catch (error: FirebaseError | any) {
+      const errorMessage = error?.message || 'Error de registro';
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
 
 // Logout
 export const logout = createAsyncThunk<void, void, { state: any }>(
   'auth/logout',
   async (_, thunkAPI) => {
     try {
-      await firebase.auth().signOut();
-      await AsyncStorage.removeItem('user'); // Eliminar el usuario de AsyncStorage
-
-      // Accede al dispatch desde thunkAPI para modificar el estado de rememberMe
-      thunkAPI.dispatch(rememberMeAction(false)); // Pon rememberMe en false
+      const auth = getAuth();
+      await signOut(auth);
+      await removeUserFromStorage(); // Eliminar el usuario de AsyncStorage
+      thunkAPI.dispatch(rememberMeAction(false)); // Actualizar el estado de rememberMe
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -122,10 +130,7 @@ const authSlice = createSlice({
       state.isAuthenticated = !!action.payload;
     },
     rememberMeAction(state: AuthState, action: PayloadAction<boolean>) {
-      if (state.isAuthenticated){
-        state.rememberMe = action.payload;
-        saveUserToStorage(state.user, state.rememberMe);
-      }
+      state.rememberMe = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -136,7 +141,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state: AuthState, action: PayloadAction<SerializableUser | null>) => {
         state.loading = false;
         state.user = action.payload;
-        state.isAuthenticated = !!action.payload; // Si hay usuario, está autenticado
+        state.isAuthenticated = !!action.payload;
         state.error = null;
       })
       .addCase(login.rejected, (state: AuthState, action: PayloadAction<string | undefined>) => {
