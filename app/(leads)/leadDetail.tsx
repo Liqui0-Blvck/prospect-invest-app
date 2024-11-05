@@ -1,15 +1,15 @@
 // screens/LeadDetail.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Dimensions, Pressable } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState, useAppDispatch, useAppSelector } from '@/redux/store';
 import { Link, useGlobalSearchParams, useNavigation} from 'expo-router';
-import { ScrollView } from 'react-native-gesture-handler';
+import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Lead } from '@/types/Leads';
 //@ts-ignore
 import call from 'react-native-phone-call';
-import { getLead, getNotesByLead } from '@/redux/slices/prospects/prospectSlice';
+import { getLead, getNotesByLead, updateLead } from '@/redux/slices/prospects/prospectSlice';
 import CallConfirmationModal from './CallConfirmationModal';
 import { ColorsNative } from '@/constants/Colors';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -21,32 +21,28 @@ import NotesList from '@/components/leadsComponents/leadNotes';
 import SlideBarButtons from '@/components/leadsComponents/SlideBarButtons';
 import { OptionType } from '@/types/OptionType';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { set } from 'firebase/database';
 
 
-const buttons = [
-  {
-    title: 'General',
-    id: 'general',
-  },
-  {
-    title: 'Inversiones',
-    id: 'inversiones',
-  },
-  {
-    title: 'Estrategias',
-    id: 'estrategias',
-  },
+const statuses = [
+  { label: 'Interesado', value: 'interesado' },
+  { label: 'No Interesado', value: 'no interesado' },
+  { label: 'Esperando', value: 'esperando' },
 ];
 
-
 export const generateUID = () => {
-  return 'uid-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  return 'uid-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
 };
 
 
 const { height } = Dimensions.get('window');
 
 const LeadDetail = () => {
+  const [selectedStatus, setSelectedStatus] = useState('');
+
   // Estados de opciones
   const [selectedOption, setSelectedOption] = useState<OptionType>(OptionType.General);
   const fadeAnim = useSharedValue(0);
@@ -60,7 +56,7 @@ const LeadDetail = () => {
   const { id } = useGlobalSearchParams()
 
   // Obtener al prospecto
-  const { lead } = useAppSelector((state: RootState) => state.lead)
+  const { lead, loading: loadingLeads } = useAppSelector((state: RootState) => state.lead)
 
   useEffect(() => {
     if (id){
@@ -68,13 +64,10 @@ const LeadDetail = () => {
     }
   }, [id])
 
-  console.log("que chucha soy", lead)
-
 
   const { interactions, loading: loadingInteracion } = useSelector((state: RootState) => state.interactions);
-  const { leads, notes, loading: loadingNotes } = useSelector((state: RootState) => state.lead);
-  const { user } = useSelector((state: RootState) => state.auth);
-  // const lead = leads.find((lead) => lead.id === id);
+  const { notes, loading: loadingNotes } = useSelector((state: RootState) => state.lead);
+  const { user } = useSelector((state: RootState) => state.auth)
 
 
 
@@ -86,16 +79,22 @@ const LeadDetail = () => {
   const [noteSelected, setNoteSelected] = useState<Notes | null>(null)
 
 
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const BottomSheetRef = useRef<BottomSheet>(null);
+  const SnapPoints = useMemo(() => ['25%', '40%'], []);
 
 
+
+  const handleSheetChanges = useCallback((index: number) => {
+    if (index === 0) {
+      setShowBottomSheet(false);
+    }
+  }, []);
 
 
   const handleSelectOption = (option: OptionType) => {
     setSelectedOption(option);
   };
-
-
-
 
 
   // Animaciones
@@ -190,51 +189,165 @@ const LeadDetail = () => {
     }
   };
 
+
   return (
     <SafeAreaView style={styles.container}>
      <ScrollView style={styles.container_safe} contentContainerStyle={{ paddingBottom: 50 }}>
       <View style={styles.heroSection}>
-          <Text style={styles.title}>{lead?.nombre}</Text>
-          <Text>Email: {lead?.email}</Text>
-          <Text>Teléfono: {lead?.numeroTelefono}</Text>
-          <Text>Estado: {lead?.estado}</Text>
+          {
+            !loadingLeads ? (
+              <Text style={styles.title}>{lead?.nombre}</Text>
+              
+            ) : (
+              <Text style={{
+                backgroundColor: ColorsNative.text[200],
+                borderRadius: 10,
+                width: 300,
+                height: 20,
+              }}/>
+            )
+          }
+          {
+            !loadingLeads ? (
+              <Text>{lead?.email}</Text>
+            ) : (
+              <Text style={{
+                backgroundColor: ColorsNative.text[200],
+                borderRadius: 10,
+                width: 250,
+                height: 20,
+              }}/>
+            )
+          }
+          {
+            !loadingLeads ? (
+              <Text>{lead?.numeroTelefono}</Text>
+              
+            ) : (
+              <Text style={{
+                backgroundColor: ColorsNative.text[200],
+                borderRadius: 10,
+                width: 200,
+                height: 20,
+              }}/>
+            )
+          }
+          {
+            !loadingLeads ? (
+              <Text>{lead?.estado}</Text>
+            ) : (
+              <Text style={{
+                backgroundColor: ColorsNative.text[200],
+                borderRadius: 10,
+                width: 100,
+                height: 20,
+              }}/>
+            )
+          }
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.buttonsContainer}>
-            <Pressable onPress={() => {handleCall(lead!)}}>
-              <View style={[styles.buttons, { backgroundColor: '#0a8967' }]}>
-                <Entypo name="phone" size={30} color="white" />
-              </View>
-            </Pressable>
+            {
+              loadingLeads ? (
+                <View style={{
+                  backgroundColor: ColorsNative.text[200],
+                  borderRadius: 10,
+                  width: 100,
+                  height: 50,
+                }}/>
+              ) : (
+                <Pressable onPress={() => handleCall(lead!)}>
+                  <View style={[styles.buttons, { backgroundColor: '#27ae60' }]}>
+                    <Entypo name="phone" size={30} color="white" />
+                  </View>
+                </Pressable>
+              )
+            
+            }
 
-            <Link href={'/(leads)/MailLead'} asChild>
+            {
+              loadingLeads ? (
+                <View style={{
+                  backgroundColor: ColorsNative.text[200],
+                  borderRadius: 10,
+                  width: 100,
+                  height: 50,
+                }}/>
+              ) : (
+                <Link href={'/(leads)/MailLead'} asChild>
               <Pressable>
                 <View style={[styles.buttons, { backgroundColor: '#ed2222' }]}>
                   <Entypo name="mail" size={30} color="white" />
                 </View>
               </Pressable>
             </Link>
+              )
+            }
 
-            <Link href={{ pathname: '/(leads)/CalendarAgenda', params: { id } }} asChild>
-              <Pressable>
-                <View style={[styles.buttons, { backgroundColor: '#2c3e50' }]}>
-                  <Entypo name="calendar" size={30} color="white" />
-                </View>
-              </Pressable>
-            </Link>
+            {
+              loadingLeads ? (
+                <View style={{
+                  backgroundColor: ColorsNative.text[200],
+                  borderRadius: 10,
+                  width: 100,
+                  height: 50,
+                }}/>
+              ) : (
+                <Link href={{ pathname: '/(leads)/CalendarAgenda', params: { id } }} asChild>
+                  <Pressable>
+                    <View style={[styles.buttons, { backgroundColor: '#2c3e50' }]}>
+                      <Entypo name="calendar" size={30} color="white" />
+                    </View>
+                  </Pressable>
+                </Link>
+              )
+            }
 
-            <Link href={{ pathname: '/(leads)/NotesForm', params: { id }}} asChild>
-              <Pressable>
-                <View style={[styles.buttons, { backgroundColor: ColorsNative.primary[200] }]}>
-                  <FontAwesome name="sticky-note" size={30} color="white" />
-                </View>
-              </Pressable>
-            </Link>
+            {
+              loadingLeads ? (
+                <View style={{
+                  backgroundColor: ColorsNative.text[200],
+                  borderRadius: 10,
+                  width: 100,
+                  height: 50,
+                }}/>
+              ) : (
+                <Link href={{ pathname: '/(leads)/NotesForm', params: { id }}} asChild>
+                  <Pressable>
+                    <View style={[styles.buttons, { backgroundColor: ColorsNative.primary[200] }]}>
+                      <FontAwesome name="sticky-note" size={30} color="white" />
+                    </View>
+                  </Pressable>
+                </Link>
+              )            
+            }
+
+            {
+              loadingLeads ? (
+                <View style={{
+                  backgroundColor: ColorsNative.text[200],
+                  borderRadius: 10,
+                  width: 100,
+                  height: 50,
+                }}/>
+              ) : (
+                <Pressable onPress={() => setShowBottomSheet(true)}>
+                  <View style={[styles.buttons, { backgroundColor: ColorsNative.estados.esperando }]}>
+                    <FontAwesome6 name="pen" size={30} color="white" />
+                  </View>
+                </Pressable>
+              )
+            }
           </View>
         </ScrollView>
 
 
-        <SlideBarButtons selectedOption={selectedOption} onSelect={handleSelectOption} />
+        <SlideBarButtons 
+          selectedOption={selectedOption} 
+          onSelect={handleSelectOption} 
+          prospectStatus={lead?.estado!}
+          loading={loadingLeads}
+          />
 
         {selectedOption === OptionType.General && (
           <>
@@ -267,6 +380,54 @@ const LeadDetail = () => {
         title={noteSelected?.title!}
         description={noteSelected?.content!}
       />
+
+      {
+        showBottomSheet && (
+          <BottomSheet
+            ref={BottomSheetRef}
+            index={1}
+            onChange={handleSheetChanges}
+            snapPoints={SnapPoints}
+            enablePanDownToClose={true}
+          >
+            <BottomSheetView style={{ padding: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Change Prospect Status</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {statuses.map((status) => (
+                  <TouchableOpacity
+                    key={status.value}
+                    onPress={() => {
+                      setSelectedStatus(status.value);
+                      dispatch(updateLead({ leadID: id, updatedData: { estado: status.value } }))
+                        .unwrap().then(() => {
+                          setShowBottomSheet(false);
+                        
+                        })
+                    }}
+                    style={{
+                      paddingVertical: 10,
+                      paddingHorizontal: 15,
+                      backgroundColor: selectedStatus === status.value ? '#4CAF50' : '#E0E0E0',
+                      borderRadius: 20,
+                      margin: 5,
+                    }}
+                  >
+                    <Text style={{ color: selectedStatus === status.value ? '#FFFFFF' : '#000000' }}>
+                      {status.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              <Text style={{ marginTop: 16, color: '#757575' }}>
+                Selected Status: {selectedStatus ? selectedStatus : 'None'}
+              </Text>
+            </BottomSheetView>
+          </BottomSheet>
+        )
+      }
+
+      
 
 
     </SafeAreaView>

@@ -5,7 +5,7 @@ import { Lead } from '@/types/Leads';
 import { Evento } from '@/types/Eventos';
 import { Interaction } from '@/types/Interacciones';
 import { Notes } from '@/types/Notes';
-import { collection, query, where, getDocs, deleteDoc, orderBy , addDoc, startAfter, limit } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, deleteDoc, orderBy , addDoc, startAfter, limit, updateDoc } from 'firebase/firestore';
 
 interface PaginationInfo {
   id?: string;
@@ -78,14 +78,53 @@ export const getLead = createAsyncThunk<Lead, string | string[], { rejectValue: 
   }
 );
 
+export const updateLead = createAsyncThunk<
+  Lead,
+  { leadID: string | string[]; updatedData: Partial<Lead> },
+  { rejectValue: string }
+>(
+  'prospects/updateLead',
+  async ({ leadID, updatedData }, { rejectWithValue, dispatch }) => {
+    try {
+      // Referencia a la colección de leads
+      const leadRef = collection(firestoreService, 'prospects');
 
-// Fetch de leads
+      // Consulta para encontrar el documento cuyo campo 'id' coincida con 'leadID'
+      const q = query(leadRef, where('id', '==', leadID));
+      const querySnapshot = await getDocs(q);
+
+      // Verifica si el documento existe
+      if (querySnapshot.empty) {
+        console.warn(`No se encontró ningún lead con leadId: ${leadID}`);
+        return rejectWithValue('El lead no existe.');
+      }
+
+      // Obtén el ID real del documento en Firestore
+      const docId = querySnapshot.docs[0].id;
+      const docRef = doc(firestoreService, 'prospects', docId);
+
+      // Actualiza solo los campos proporcionados en 'updatedData'
+      await updateDoc(docRef, updatedData);
+
+      // Retorna los datos actualizados incluyendo el ID del documento
+      dispatch(getLead(leadID));
+      dispatch(fetchLeads({ pageSize: 10, append: false }));
+      return { ...updatedData, id: leadID } as Lead;
+    } catch (error: any) {
+      console.error(`Error al actualizar el lead con leadId ${leadID}:`, error);
+      return rejectWithValue('Error al actualizar el lead.');
+    }
+  }
+);
+
+
 export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
   'prospects/fetchLeads',
-  async ({ search, pageSize, append, filters }, { getState, rejectWithValue }) => {
+  async ({ search, pageSize, append, filters }, { getState, rejectWithValue, dispatch }) => {
     try {
       const leadsRef = collection(firestoreService, 'prospects');
-      // Inicializar la consulta ordenada
+
+      // Inicializar la consulta ordenada por nombre y fecha de creación
       let q = query(
         leadsRef,
         orderBy('nombre'),
@@ -95,11 +134,12 @@ export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
 
       // Aplicar filtro de búsqueda si existe
       if (search) {
-        q = query(q, where('nombre', '>=', search));
+        q = query(q, where('nombre', '>=', search), where('nombre', '<=', search + '\uf8ff'));
       }
 
       // Aplicar filtros adicionales si existen
       if (filters && filters.length > 0) {
+        console.log(filters)
         q = query(q, where('estado', 'in', filters.slice(0, 10)));
       }
 
@@ -107,7 +147,7 @@ export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
       const state = getState() as RootState;
       const lastVisible = state.lead.lastVisible; // Asegúrate de que la ruta sea correcta
 
-      // Paginación usando `startAfter` con valores correctos
+      // Paginación usando `startAfter` si estamos cargando más datos
       if (append && lastVisible) {
         q = query(q, startAfter(lastVisible.nombre, lastVisible.fechaCreacion));
       }
@@ -126,12 +166,11 @@ export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
 
       return { leads, lastVisible: newLastVisible };
     } catch (error: any) {
-      console.error('Error fetching leads:', error);
-      return rejectWithValue('Failed to fetch leads');
+      console.error('Error al obtener leads:', error);
+      return rejectWithValue('No se pudo obtener los leads');
     }
   }
 );
-
 // Agregar leads a Firestore
 export const addLeadsToFirestore = createAsyncThunk<
   void,
@@ -328,7 +367,21 @@ const prospectsSlice = createSlice({
       .addCase(getLead.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Error al obtener el lead.';
-      });
+      })
+      .addCase(updateLead.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateLead.fulfilled, (state, action: PayloadAction<Lead>) => {
+        state.loading = false;
+        if (state.lead && state.lead.id === action.payload.id) {
+          state.lead = { ...state.lead, ...action.payload };
+        }
+      })
+      .addCase(updateLead.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Error al actualizar el lead.';
+      })
   },
 });
 

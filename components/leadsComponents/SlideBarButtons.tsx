@@ -7,6 +7,8 @@ import { ColorsNative } from '@/constants/Colors';
 interface SlideBarButtonsProps {
   selectedOption: OptionType;
   onSelect: (option: OptionType) => void;
+  prospectStatus: string
+  loading: boolean
 }
 
 const buttons = [
@@ -15,7 +17,14 @@ const buttons = [
   { title: 'Estrategias', id: OptionType.Estrategias },
 ];
 
-const SlideBarButtons: React.FC<SlideBarButtonsProps> = ({ selectedOption, onSelect }) => {
+
+
+const SlideBarButtons: React.FC<SlideBarButtonsProps> = ({ selectedOption, onSelect, prospectStatus, loading }) => {
+  const visibleButtons = prospectStatus === 'esperando' 
+  ? buttons.filter((button) => button.id === OptionType.General)
+  : buttons;
+
+
   return (
     <ScrollView
       style={styles.container}
@@ -23,25 +32,51 @@ const SlideBarButtons: React.FC<SlideBarButtonsProps> = ({ selectedOption, onSel
       contentContainerStyle={{ alignItems: 'center' }}
       showsHorizontalScrollIndicator={false}
     >
-      {buttons.map((button) => (
-        <Pressable
-          key={button.id}
-          style={[
-            styles.button,
-            selectedOption === button.id && styles.buttonActive,
-          ]}
-          onPress={() => onSelect(button.id)}
-        >
-          <Text
-            style={[
-              styles.buttonText,
-              selectedOption === button.id && styles.buttonTextActive,
-            ]}
-          >
-            {button.title}
-          </Text>
-        </Pressable>
-      ))}
+      {
+        loading 
+          ? (
+            <>
+              {
+                Array.from({ length: 3 }).map((_, index) => (
+                  <Text
+                    key={index}
+                    style={{
+                      backgroundColor: ColorsNative.text[200],
+                      paddingVertical: 12,
+                      marginHorizontal: 8,
+                      borderRadius: 8,
+                      width: 130,
+                      alignItems: 'center',
+                    }}
+                  />
+                ))
+              }
+            </>
+          )
+          : (
+            <>
+              {visibleButtons.map((button) => (
+                <Pressable
+                  key={button.id}
+                  style={[
+                    styles.button,
+                    selectedOption === button.id && styles.buttonActive,
+                  ]}
+                  onPress={() => onSelect(button.id)}
+                >
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      selectedOption === button.id && styles.buttonTextActive,
+                    ]}
+                  >
+                    {button.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </>
+          )
+      }
     </ScrollView>
   );
 };
