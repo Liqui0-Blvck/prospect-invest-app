@@ -187,15 +187,29 @@ const LeadDetail = () => {
       }
       setModalVisible(false);
     }
-  };
+  }
 
+  const [showSkeleton, setShowSkeleton] = useState(true);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (!loadingLeads) {
+      // Mantener el "skeleton" durante un mínimo de 500 ms aunque `loadingLeads` sea false
+      timer = setTimeout(() => setShowSkeleton(false), 500);
+    } else {
+      setShowSkeleton(true); // Si `loadingLeads` vuelve a true, mostrar el "skeleton" nuevamente
+    }
+
+    return () => clearTimeout(timer); // Limpiar el temporizador si el componente se desmonta
+  }, [loadingLeads]);
 
   return (
     <SafeAreaView style={styles.container}>
      <ScrollView style={styles.container_safe} contentContainerStyle={{ paddingBottom: 50 }}>
       <View style={styles.heroSection}>
           {
-            !loadingLeads ? (
+            !showSkeleton ? (
               <Text style={styles.title}>{lead?.nombre}</Text>
               
             ) : (
@@ -208,7 +222,7 @@ const LeadDetail = () => {
             )
           }
           {
-            !loadingLeads ? (
+            !showSkeleton ? (
               <Text>{lead?.email}</Text>
             ) : (
               <Text style={{
@@ -220,7 +234,7 @@ const LeadDetail = () => {
             )
           }
           {
-            !loadingLeads ? (
+            !showSkeleton ? (
               <Text>{lead?.numeroTelefono}</Text>
               
             ) : (
@@ -233,7 +247,7 @@ const LeadDetail = () => {
             )
           }
           {
-            !loadingLeads ? (
+            !showSkeleton ? (
               <Text>{lead?.estado}</Text>
             ) : (
               <Text style={{
@@ -248,51 +262,46 @@ const LeadDetail = () => {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.buttonsContainer}>
             {
-              loadingLeads ? (
-                <View style={{
-                  backgroundColor: ColorsNative.text[200],
-                  borderRadius: 10,
-                  width: 100,
-                  height: 50,
-                }}/>
-              ) : (
+              !showSkeleton ? (
                 <Pressable onPress={() => handleCall(lead!)}>
                   <View style={[styles.buttons, { backgroundColor: '#27ae60' }]}>
                     <Entypo name="phone" size={30} color="white" />
                   </View>
                 </Pressable>
+                
+              ) : (
+                <View style={{
+                  backgroundColor: ColorsNative.text[200],
+                  borderRadius: 10,
+                  width: 100,
+                  height: 50,
+                }}/>
               )
             
             }
 
             {
-              loadingLeads ? (
+              !showSkeleton ? (
+                <Link href={'/(leads)/MailLead'} asChild>
+                  <Pressable>
+                    <View style={[styles.buttons, { backgroundColor: '#ed2222' }]}>
+                      <Entypo name="mail" size={30} color="white" />
+                    </View>
+                  </Pressable>
+                </Link>
+                
+              ) : (
                 <View style={{
                   backgroundColor: ColorsNative.text[200],
                   borderRadius: 10,
                   width: 100,
                   height: 50,
                 }}/>
-              ) : (
-                <Link href={'/(leads)/MailLead'} asChild>
-              <Pressable>
-                <View style={[styles.buttons, { backgroundColor: '#ed2222' }]}>
-                  <Entypo name="mail" size={30} color="white" />
-                </View>
-              </Pressable>
-            </Link>
               )
             }
 
             {
-              loadingLeads ? (
-                <View style={{
-                  backgroundColor: ColorsNative.text[200],
-                  borderRadius: 10,
-                  width: 100,
-                  height: 50,
-                }}/>
-              ) : (
+              !showSkeleton ? (
                 <Link href={{ pathname: '/(leads)/CalendarAgenda', params: { id } }} asChild>
                   <Pressable>
                     <View style={[styles.buttons, { backgroundColor: '#2c3e50' }]}>
@@ -300,18 +309,19 @@ const LeadDetail = () => {
                     </View>
                   </Pressable>
                 </Link>
-              )
-            }
-
-            {
-              loadingLeads ? (
+              ) : (
+                
                 <View style={{
                   backgroundColor: ColorsNative.text[200],
                   borderRadius: 10,
                   width: 100,
                   height: 50,
                 }}/>
-              ) : (
+              )
+            }
+
+            {
+              !showSkeleton ? (
                 <Link href={{ pathname: '/(leads)/NotesForm', params: { id }}} asChild>
                   <Pressable>
                     <View style={[styles.buttons, { backgroundColor: ColorsNative.primary[200] }]}>
@@ -319,25 +329,35 @@ const LeadDetail = () => {
                     </View>
                   </Pressable>
                 </Link>
-              )            
-            }
-
-            {
-              loadingLeads ? (
+              ) : (
+                
                 <View style={{
                   backgroundColor: ColorsNative.text[200],
                   borderRadius: 10,
                   width: 100,
                   height: 50,
                 }}/>
-              ) : (
+              )            
+            }
+
+            {
+              !showSkeleton ? (
                 <Pressable onPress={() => setShowBottomSheet(true)}>
                   <View style={[styles.buttons, { backgroundColor: ColorsNative.estados.esperando }]}>
                     <FontAwesome6 name="pen" size={30} color="white" />
                   </View>
                 </Pressable>
+                
+              ) : (
+                <View style={{
+                  backgroundColor: ColorsNative.text[200],
+                  borderRadius: 10,
+                  width: 100,
+                  height: 50,
+                }}/>
               )
             }
+
           </View>
         </ScrollView>
 
@@ -346,7 +366,7 @@ const LeadDetail = () => {
           selectedOption={selectedOption} 
           onSelect={handleSelectOption} 
           prospectStatus={lead?.estado!}
-          loading={loadingLeads}
+          loading={showSkeleton}
           />
 
         {selectedOption === OptionType.General && (
