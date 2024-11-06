@@ -21,6 +21,8 @@ import { generateUID } from '../(leads)/leadDetail';
 import ModalF from '@/components/Modal';
 import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
+import { useLoadingSkeleton } from '@/hooks/useLoadingSkeleton';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 const data = [
   { label: 'Interesado', value: 'interesado' },
@@ -62,6 +64,20 @@ const getStatusColor = (estado: string) => {
 };
 
 const Leads = () => {
+
+  // animación de pulso
+  const pulse = useSharedValue(1);
+
+  // Iniciar la animación de pulso al montar el componente
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(0.4, { duration: 800 }), -1, true);
+  }, []);
+
+  // Estilo animado para el efecto de pulso
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: pulse.value,
+  }));
+
 
 
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
@@ -108,10 +124,6 @@ const Leads = () => {
   };
 
   
-  
-  
-  
-
 
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
@@ -156,7 +168,8 @@ const Leads = () => {
   // obtencion de informacion desde el store
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state: RootState) => state.auth);
-  const { leads, hasMore: hasMoreData } = useSelector((state: RootState) => state.lead)
+  const { leads, hasMore: hasMoreData, loading: loadingLeads } = useSelector((state: RootState) => state.lead)
+  const { showSkeleton } = useLoadingSkeleton(loadingLeads, 2000)
 
   // Snap points para el BottomSheet
   const BottomSheetRef = useRef<BottomSheet>(null);
@@ -272,8 +285,6 @@ const Leads = () => {
   );
 
 
-  console.log(leadToDelete)
-
 
   const renderLeftActions = (index: number) => (
     <Pressable
@@ -290,7 +301,7 @@ const Leads = () => {
   const handleDeleteConfirmation = () => {
     const { id, index } = leadToDelete;
 
-    console.log(id, index)
+    // console.log(id, index)
     if (id && index !== null) {
       dispatch(deleteLead(id)); // Despacha la acción de eliminar
       if (swipeableRefs.current[index]) {
@@ -364,6 +375,9 @@ const Leads = () => {
     }
   };
 
+
+
+
   return (
     <SafeAreaView style={styles.container}>
       <BackgroundStyle 
@@ -398,20 +412,32 @@ const Leads = () => {
         }
         />
 
-
         {
-          loading && leads.length === 0 ? (
-            <View style={styles.leadsCard}>
-              <Text style={{
-                fontSize: 20,
-                fontWeight: 'bold',
-                textAlign: 'center',
-                marginVertical: 5
-              }}>No hay leads</Text>
-            </View>
-          )
-          : (
-            <FlatList
+          showSkeleton
+            ? (
+              <View style={styles.leadsCard}>
+                <View style={skeletonStyle.skeletonContainer}>
+                  {
+                    Array.from({ length: 7 }).map((_, index) => (
+                      <Animated.View key={index} style={[skeletonStyle.skeletonCard, animatedStyle]}>
+                        <View style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}>
+                          <View style={[skeletonStyle.skeletonText, { width: '45%'}]} />
+                          <View style={[skeletonStyle.skeletonText, { width: '25%'}]} />
+                        </View>
+                        <View style={[skeletonStyle.skeletonText, { width: '60%' }]} />
+                        <View style={[skeletonStyle.skeletonText, { width: '30%', marginTop: 15 }]} />
+                      </Animated.View>
+                    ))
+                  }
+                </View>
+              </View>
+              )
+            : (
+              <FlatList
                 data={leads}
                 contentContainerStyle={{ paddingBottom: 120 }}
                 style={[styles.leadsCard]}
@@ -466,8 +492,9 @@ const Leads = () => {
                   );
                 }}
               />
-          )
+            )
         }
+
         {showBottomSheet && (
         <BottomSheet
           ref={BottomSheetRef}
@@ -877,4 +904,28 @@ const stylesSelect = StyleSheet.create({
 });
 
 
+const skeletonStyle = StyleSheet.create({
+  skeletonContainer: {
+    borderRadius: 10,
+    backgroundColor: ColorsNative.text[100],
+  },
+  skeletonCard: {
+    width: '100%',
+    height: 90,
+    borderRadius: 5,
+    backgroundColor: ColorsNative.text[300],
+    marginVertical: 5,
+    paddingHorizontal: 10,
+  },
+  skeletonText: {
+    height: 15,
+    borderRadius: 5,
+    backgroundColor: ColorsNative.text[200],
+    marginVertical: 5,
+  }
+})
+
+
 export default Leads;
+
+

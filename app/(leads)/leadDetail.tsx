@@ -25,6 +25,7 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { set } from 'firebase/database';
+import { useLoadingSkeleton } from '@/hooks/useLoadingSkeleton';
 
 
 const statuses = [
@@ -63,6 +64,8 @@ const LeadDetail = () => {
       dispatch(getLead(id));
     }
   }, [id])
+
+  const { showSkeleton } = useLoadingSkeleton(loadingLeads, 500);
 
 
   const { interactions, loading: loadingInteracion } = useSelector((state: RootState) => state.interactions);
@@ -188,21 +191,6 @@ const LeadDetail = () => {
       setModalVisible(false);
     }
   }
-
-  const [showSkeleton, setShowSkeleton] = useState(true);
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-
-    if (!loadingLeads) {
-      // Mantener el "skeleton" durante un mínimo de 500 ms aunque `loadingLeads` sea false
-      timer = setTimeout(() => setShowSkeleton(false), 500);
-    } else {
-      setShowSkeleton(true); // Si `loadingLeads` vuelve a true, mostrar el "skeleton" nuevamente
-    }
-
-    return () => clearTimeout(timer); // Limpiar el temporizador si el componente se desmonta
-  }, [loadingLeads]);
 
   return (
     <SafeAreaView style={styles.container}>

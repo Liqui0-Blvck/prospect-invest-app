@@ -9,10 +9,9 @@ import { useSelector } from 'react-redux'
 const { width, height } = Dimensions.get('window')
 
 const Home = () => {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth)
   const { user } = useAppSelector((state: RootState) => state.auth)
   
-  console.log(user)
+  // console.log(user)
 
 
   return (

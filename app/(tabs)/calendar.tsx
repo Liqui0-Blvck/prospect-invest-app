@@ -79,7 +79,7 @@ const Calendar = () => {
           items={transformarEventosAAgenda(eventos)} // Convertimos los eventos a formato adecuado
           renderItem={(item: Evento) => {
             const lead = leads.find((lead) => lead.id === item.asistente);
-            console.log("lead encontrado", lead)
+            // console.log("lead encontrado", lead)
 
             return (
               <View style={styles.eventContainer}>

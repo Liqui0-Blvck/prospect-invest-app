@@ -57,7 +57,7 @@ const CalendarAgenda = ({ leadID } : { leadID: string}) => {
 
   const { eventos } = useSelector((state: RootState) => state.lead);
 
-  console.log(eventos)
+  // console.log(eventos)
 
   const formik = useFormik({
     initialValues: {

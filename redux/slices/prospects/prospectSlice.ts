@@ -139,7 +139,6 @@ export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
 
       // Aplicar filtros adicionales si existen
       if (filters && filters.length > 0) {
-        console.log(filters)
         q = query(q, where('estado', 'in', filters.slice(0, 10)));
       }
 
