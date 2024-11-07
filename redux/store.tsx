@@ -2,10 +2,12 @@ import { configureStore, ThunkDispatch } from '@reduxjs/toolkit';
 import authReducer from '@/redux/slices/auth/authSlice';
 import prospectReducer from '@/redux/slices/prospects/prospectSlice';
 import interactionReducer from '@/redux/slices/interactions/interactionSlice';
+import sendGridReducer from '@/redux/slices/sendgrid/sendgridSlice';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { persistReducer, persistStore } from 'redux-persist';
 import { FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
+
 
 // Configuración de persistencia para redux-persist
 const persistConfig = {
@@ -19,6 +21,7 @@ const rootReducer = {
   auth: persistReducer(persistConfig, authReducer),
   lead: prospectReducer,
   interactions: interactionReducer,
+  sendgrid: sendGridReducer,
 };
 
 // Configuración del store con redux-persist

@@ -268,7 +268,7 @@ const LeadDetail = () => {
             
             }
 
-            {
+            {/* {
               !showSkeleton ? (
                 <Link href={'/(leads)/MailLead'} asChild>
                   <Pressable>
@@ -286,7 +286,7 @@ const LeadDetail = () => {
                   height: 50,
                 }}/>
               )
-            }
+            } */}
 
             {
               !showSkeleton ? (
