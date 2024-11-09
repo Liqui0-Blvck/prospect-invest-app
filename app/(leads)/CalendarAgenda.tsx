@@ -4,11 +4,13 @@ import { Calendar } from 'react-native-calendars';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useGlobalSearchParams, useNavigation } from 'expo-router';
+import { router, useGlobalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { ADD_EVENT, ADD_INTERACTION } from '@/redux/slices/prospects/prospectSlice';
-import { RootState } from '@/redux/store';
+import { RootState, useAppDispatch, useAppSelector } from '@/redux/store';
 import { ColorsNative } from '@/constants/Colors';
+import { agregarEvento } from '@/redux/slices/calendar/calendarSlice';
+import { addInteraction } from '@/redux/slices/interactions/interactionSlice';
+import { generateUID } from './leadDetail';
 
 // Validación del formulario usando Yup
 const MeetingSchema = Yup.object().shape({
@@ -18,12 +20,14 @@ const MeetingSchema = Yup.object().shape({
   details: Yup.string().required('Los detalles son obligatorios'),
 });
 
-const CalendarAgenda = ({ leadID } : { leadID: string}) => {
+const CalendarAgenda = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const navigation = useNavigation();
-  const dispatch = useDispatch();
+  const router = useRouter()
+  const dispatch = useAppDispatch();
   const { id } = useGlobalSearchParams()
+  const { user } = useAppSelector((state: RootState) => state.auth)
 
 
   // Función para mostrar el selector de hora
@@ -69,19 +73,34 @@ const CalendarAgenda = ({ leadID } : { leadID: string}) => {
     },
     // validationSchema: MeetingSchema,
     onSubmit: (values) => {
-      dispatch(ADD_EVENT({
-        ...values, 
-        descripcion: values.details,
-        fecha: selectedDate,
-        asistente: id.toString()
-      }))
-      navigation.goBack();
-      dispatch(ADD_INTERACTION({ 
-        tipo: 'Reunión',
-        fecha: selectedDate ,
-        notas: 'Reunión agendada',
-        leadId: id.toString()
-      }))
+      
+      dispatch(
+        agregarEvento({
+          ...values,
+          descripcion: values.details,
+          fecha: selectedDate,
+          asistente: id.toString(),
+        })
+      )
+        .unwrap()
+        .then(() => {
+          dispatch(
+            addInteraction({
+              uid: generateUID(),
+              tipo: 'Reunión',
+              fecha: selectedDate,
+              notas: 'Reunión agendada',
+              leadID: id.toString(),
+              userID: user?.uid as string,
+            })
+          )
+          
+          formik.resetForm();
+          navigation.goBack();
+        })
+        .catch((error) => {
+          console.error('Error al agendar el evento:', error);
+        });
      
     },
   });

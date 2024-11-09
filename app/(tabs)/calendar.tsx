@@ -1,7 +1,8 @@
 import BackgroundStyle from '@/components/BackgroundStyle';
 import { ColorsNative } from '@/constants/Colors';
 import { events } from '@/mocks/calendar';
-import { RootState } from '@/redux/store';
+import { fetchEventos } from '@/redux/slices/calendar/calendarSlice';
+import { RootState, useAppDispatch } from '@/redux/store';
 import { Evento } from '@/types/Eventos';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -34,7 +35,16 @@ LocaleConfig.defaultLocale = 'es';
 
 const Calendar = () => {
   const [fechaActual, setFechaActual] = useState({ dia: '', mes: '', ano: '' });
-  const { leads, eventos } = useSelector((state: RootState) => state.lead);
+  const { leads } = useSelector((state: RootState) => state.lead);
+  const { eventos } = useSelector((state: RootState) => state.calendar);
+  const dispatch = useAppDispatch()
+
+
+  useEffect(() => {
+    dispatch(fetchEventos())
+  }, [] )
+
+  console.log(eventos)
 
 
   // Obtener la fecha actual
@@ -76,11 +86,9 @@ const Calendar = () => {
       {/* Componente Agenda con la configuración en español */}
       <View style={styles.calendarContainer}>
         <Agenda
-          items={transformarEventosAAgenda(eventos)} // Convertimos los eventos a formato adecuado
+          items={transformarEventosAAgenda(eventos)}
           renderItem={(item: Evento) => {
             const lead = leads.find((lead) => lead.id === item.asistente);
-            // console.log("lead encontrado", lead)
-
             return (
               <View style={styles.eventContainer}>
                 <Text style={styles.title}>{item.titulo}</Text>
@@ -90,23 +98,29 @@ const Calendar = () => {
               </View>
             );
           }}
+          renderEmptyDate={() => (
+            <View style={styles.emptyDateContainer}>
+              <Text style={styles.emptyDateText}>No hay reuniones agendadas</Text>
+            </View>
+          )}
           theme={{
-            agendaDayTextColor: ColorsNative.accent[100], // Color del texto del día
-            agendaDayNumColor: ColorsNative.accent[100],  // Color del número del día
-            agendaTodayColor: '#1e90ff',   // Color del texto de "Hoy"
-            agendaKnobColor: ColorsNative.accent[100],    // Color del botón deslizante
-            textSectionTitleColor: '#4a90e2', // Color del texto de las secciones
-            selectedDayBackgroundColor: ColorsNative.accent[100], // Fondo del día seleccionado
-            selectedDayTextColor: '#ffffff', // Texto del día seleccionado
-            todayTextColor: '#1e90ff',      // Color del texto del día actual
-            dayTextColor: '#2d4150',        // Color del texto de los días no seleccionados
-            dotColor: ColorsNative.accent[100],            // Color de los puntos de eventos
-            selectedDotColor: '#ffffff',     // Color de los puntos seleccionados
-            monthTextColor: '#4a90e2',      // Color del texto del mes
-            indicatorColor: '#4a90e2',      // Color del indicador de carga
+            agendaDayTextColor: ColorsNative.accent[100],
+            agendaDayNumColor: ColorsNative.accent[100],
+            agendaTodayColor: '#1e90ff',
+            agendaKnobColor: ColorsNative.accent[100],
+            textSectionTitleColor: '#4a90e2',
+            selectedDayBackgroundColor: ColorsNative.accent[100],
+            selectedDayTextColor: '#ffffff',
+            todayTextColor: '#1e90ff',
+            dayTextColor: '#2d4150',
+            dotColor: ColorsNative.accent[100],
+            selectedDotColor: '#ffffff',
+            monthTextColor: '#4a90e2',
+            indicatorColor: '#4a90e2',
           }}
         />
       </View>
+
 
     </SafeAreaView>
   );
@@ -159,6 +173,16 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 12,
     color: '#888',
+  },
+  emptyDateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 100,
+  },
+  emptyDateText: {
+    fontSize: 16,
+    color: ColorsNative.text[300],
   },
 });
 

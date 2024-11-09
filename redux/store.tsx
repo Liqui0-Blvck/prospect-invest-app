@@ -3,6 +3,7 @@ import authReducer from '@/redux/slices/auth/authSlice';
 import prospectReducer from '@/redux/slices/prospects/prospectSlice';
 import interactionReducer from '@/redux/slices/interactions/interactionSlice';
 import sendGridReducer from '@/redux/slices/sendgrid/sendgridSlice';
+import calendarReducer from '@/redux/slices/calendar/calendarSlice';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { persistReducer, persistStore } from 'redux-persist';
@@ -22,6 +23,7 @@ const rootReducer = {
   lead: prospectReducer,
   interactions: interactionReducer,
   sendgrid: sendGridReducer,
+  calendar: calendarReducer,
 };
 
 // Configuración del store con redux-persist
