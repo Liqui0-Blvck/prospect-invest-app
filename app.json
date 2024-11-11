@@ -1,8 +1,16 @@
 {
   "expo": {
     "name": "prospect-invest-app",
-    "slug": "prospect-invest-app",
+    "slug": "invest-lead",
     "version": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "66727f6a-1081-4f51-ae56-987eef028620"
+      },
+      "router": {
+        "origin": false
+      }
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -31,6 +39,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "liqui0_blvck"
   }
 }

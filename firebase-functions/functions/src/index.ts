@@ -1,68 +1,65 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
-import * as sgMail from '@sendgrid/mail';
-import * as sgClient from '@sendgrid/client';
+import { getMessaging } from 'firebase-admin/messaging';
+import { getFirestore } from 'firebase-admin/firestore';
 
 initializeApp();
+const db = getFirestore();
 
-// Configura SendGrid con la API Key
+/**
+ * Función para registrar el token del dispositivo en Firestore
+ */
+export const registerDeviceToken = onRequest(async (req, res) => {
+  const { userId, token } = req.body;
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-
-
-
-export const sendEmail = onRequest(async (req, res) => {
-  const { to, subject, text, user } = req.body;
-
-  // Validación de campos obligatorios
-  if (!to || !subject || !text || !user?.email || !user?.nombre) {
-    console.error('Error: Faltan campos obligatorios en la solicitud');
-    res.status(400).json({ success: false, error: 'Faltan campos obligatorios en la solicitud' });
+  if (!userId || !token) {
+    res.status(400).json({ success: false, error: 'Faltan campos obligatorios' });
     return;
   }
 
-  const msg = {
-    to, // Destinatario
-    from: 'nicolasmacgwrk@gmail.com', // Cambia a tu remitente verificado en SendGrid
-    subject,
-    templateId: 'd-5f632933d3404dd38d6d7d753aa379f4',
-    dynamic_template_data: {
-      subject,
-      text,
-      user: {
-        email: user.email,
-        nombre: user.nombre,
-      },
-    },
-    replyTo: user.email,
-  };
-
   try {
-    await sgMail.send(msg);
-    console.log('Correo enviado a:', to);
-    res.status(200).json({ success: true, message: 'Correo enviado exitosamente' });
-  } catch (error: any) {
-    console.error('Error al enviar correo:', error);
-    res.status(500).json({ success: false, error: error.message });
+    await db.collection('users').doc(userId).set({ token }, { merge: true });
+    res.status(200).json({ success: true, message: 'Token registrado correctamente' });
+  } catch (error) {
+    console.error('Error al registrar el token:', error);
+    res.status(500).json({ success: false, error: 'Error al registrar el token' });
   }
-})
+});
 
+/**
+ * Función para enviar una notificación push a un usuario específico
+ */
+export const sendNotification = onRequest(async (req, res) => {
+  const { userId, title, body } = req.body;
 
-export const getSendGridTemplates = onRequest(async (req, res) => {
+  if (!userId || !title || !body) {
+    res.status(400).json({ success: false, error: 'Faltan campos obligatorios' });
+    return;
+  }
+
   try {
-    const request = {
-      url: `/v3/templates`,
-      method: "GET" as const, // Especificamos el tipo aquí
-      qs: { page_size: 18 },
+    // Obtener el token del usuario desde Firestore
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userToken = userDoc.data()?.token;
+
+    if (!userToken) {
+      res.status(404).json({ success: false, error: 'Token no encontrado' });
+      return;
+    }
+
+    // Enviar la notificación a través de FCM
+    const message = {
+      notification: {
+        title,
+        body,
+      },
+      token: userToken,
     };
 
-    const [response, body] = await sgClient.request(request);
-
-    console.log(response, body);
-
-    res.status(response.statusCode).json(body);
+    await getMessaging().send(message);
+    res.status(200).json({ success: true, message: 'Notificación enviada correctamente' });
   } catch (error) {
-    console.error("Error fetching templates:", error);
-    res.status(500).send({ error: "Failed to fetch templates" });
+    console.error('Error al enviar notificación:', error);
+    res.status(500).json({ success: false, error: 'Error al enviar notificación' });
   }
 });

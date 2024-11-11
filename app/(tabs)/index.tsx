@@ -10,8 +10,7 @@ const { width, height } = Dimensions.get('window')
 
 const Home = () => {
   const { user } = useAppSelector((state: RootState) => state.auth)
-  
-  // console.log(user)
+
 
 
   return (
