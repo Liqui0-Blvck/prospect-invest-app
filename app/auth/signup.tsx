@@ -12,7 +12,7 @@ const Register = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { loading } = useSelector((state: RootState) => state.auth); // Accede al estado de auth
+  const { loading } = useSelector((state: RootState) => state.auth);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -25,39 +25,46 @@ const Register = () => {
     fullName: Yup.string().required('Nombre completo es obligatorio'),
     email: Yup.string().email('Correo inválido').required('Correo electrónico es obligatorio'),
     password: Yup.string().min(6, 'La contraseña debe tener al menos 6 caracteres').required('Contraseña es obligatoria'),
+    telefono: Yup.string()
+      .required('Número de teléfono es obligatorio')
+      .matches(/^\+569\d{8}$/, 'Debe ser un número de teléfono chileno válido (ej: +56912345678)'),
   });
 
   // Configuración de useFormik
   const formik = useFormik({
-    initialValues: { fullName: '', email: '', password: '' },
+    initialValues: { fullName: '', email: '', password: '', telefono: '' },
     validationSchema,
     onSubmit: async (values) => {
-      const credentials = { email: values.email, password: values.password };
+      const credentials = {
+        email: values.email,
+        password: values.password,
+        nombre: values.fullName,
+        phoneNumber: values.telefono,
+      };
       
       try {
-        // Esperar el resultado de la acción dispatch
-        const resultAction = await dispatch(register(credentials))
-    
+        // Ejecutar la acción dispatch para registrar al usuario
+        const resultAction = await dispatch(register(credentials));
+
         if (register.fulfilled.match(resultAction)) {
-          // Registro exitoso
-          console.log("Todo Bien revisa")
-          router.replace('/auth/login'); // Navegar a la pantalla de login
+          console.log("Usuario registrado correctamente");
+          router.replace('/auth/login');
         } else {
-          // Registro fallido
-          console.log(resultAction.payload)
-          Alert.alert('Error', resultAction.payload); // Mostrar mensaje de error
+          console.log(resultAction.payload);
+          Alert.alert('Error', resultAction.payload || 'Error al registrar');
         }
       } catch (error: any) {
-        // Manejo de errores
         Alert.alert('Error', error.message);
       }
-    }    
+    }
   });
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.innerContainer}>
         <Text style={styles.title}>Registrarse</Text>
+
+        {/* Campo de Nombre Completo */}
         <TextInput
           style={styles.input}
           placeholder="Nombre Completo"
@@ -69,7 +76,8 @@ const Register = () => {
         {formik.touched.fullName && formik.errors.fullName && (
           <Text style={styles.error}>{formik.errors.fullName}</Text>
         )}
-        
+
+        {/* Campo de Correo Electrónico */}
         <TextInput
           style={styles.input}
           placeholder="Correo Electrónico"
@@ -77,11 +85,13 @@ const Register = () => {
           onChangeText={formik.handleChange('email')}
           onBlur={formik.handleBlur('email')}
           value={formik.values.email}
+          keyboardType="email-address"
         />
         {formik.touched.email && formik.errors.email && (
           <Text style={styles.error}>{formik.errors.email}</Text>
         )}
-        
+
+        {/* Campo de Contraseña */}
         <TextInput
           style={styles.input}
           placeholder="Contraseña"
@@ -94,7 +104,22 @@ const Register = () => {
         {formik.touched.password && formik.errors.password && (
           <Text style={styles.error}>{formik.errors.password}</Text>
         )}
-        
+
+        {/* Campo de Número de Teléfono */}
+        <TextInput
+          style={styles.input}
+          placeholder="Número de Teléfono (ej: +56912345678)"
+          placeholderTextColor="#888"
+          onChangeText={formik.handleChange('telefono')}
+          onBlur={formik.handleBlur('telefono')}
+          value={formik.values.telefono}
+          keyboardType="phone-pad"
+        />
+        {formik.touched.telefono && formik.errors.telefono && (
+          <Text style={styles.error}>{formik.errors.telefono}</Text>
+        )}
+
+        {/* Botón de Registro */}
         <TouchableOpacity style={styles.outlineButton} onPress={() => formik.handleSubmit()} disabled={loading}>
           {loading ? (
             <ActivityIndicator size="small" color="#000" />
@@ -102,10 +127,9 @@ const Register = () => {
             <Text style={styles.buttonText}>Crear Cuenta</Text>
           )}
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push('/auth/login')}
-        >
+
+        {/* Botón para redirigir al Login */}
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/auth/login')}>
           <Text style={styles.outlineButtonText}>Ya tengo una cuenta</Text>
         </TouchableOpacity>
       </View>
@@ -136,7 +160,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
-    marginBottom: 5,
+    marginBottom: 10,
     color: '#333',
   },
   error: {
@@ -170,10 +194,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   outlineButtonText: {
-    color: '#ffffff',
+    color: '#fff',
     fontWeight: 'bold',
   },
 });
 
 export default Register;
-

@@ -1,8 +1,9 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { FirebaseError } from 'firebase/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth } from '@/firebase'; // Asegúrate de que el auth aquí esté configurado con initializeAuth
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth, firestoreService } from '@/firebase'; // Asegúrate de que el auth aquí esté configurado con initializeAuth
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut,updateProfile  } from 'firebase/auth';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 // Define el estado inicial
 interface AuthState {
@@ -19,18 +20,23 @@ interface SerializableUser {
   displayName: string | null;
   photoURL: string | null;
   phoneNumber: string | null;
+  nombre?: string;
+  role?: string;
+  createdAt?: string;
+  notificationToken?: string;
 }
 
-const getSerializableUser = (user: any): SerializableUser | null => {
-  if (!user) return null;
-  return {
-    uid: user.uid,
-    email: user.email,
-    displayName: user.displayName,
-    photoURL: user.photoURL,
-    phoneNumber: user.phoneNumber,
-  };
-};
+const getSerializableUser = (user: any): SerializableUser => ({
+  uid: user.uid,
+  email: user.email,
+  displayName: user.displayName,
+  photoURL: user.photoURL,
+  phoneNumber: user.phoneNumber,
+  nombre: user.nombre,
+  role: user.role,
+  createdAt: user.createdAt,
+  notificationToken: user.notificationToken,
+});
 
 const initialState: AuthState = {
   user: null,
@@ -44,6 +50,8 @@ const initialState: AuthState = {
 interface Credentials {
   email: string;
   password: string;
+  nombre: string;
+  phoneNumber?: string;
 }
 
 // Función para guardar el estado en AsyncStorage
@@ -94,7 +102,27 @@ export const register = createAsyncThunk<SerializableUser | null, Credentials, {
     try {
       const auth = getAuth();
       const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
-      return getSerializableUser(userCredential.user);
+      const user = userCredential.user;
+
+      // Actualizar perfil con el nombre
+      if (credentials.nombre) {
+        await updateProfile(user, { displayName: credentials.nombre });
+      }
+
+      // Guardar en Firestore
+      const userDoc = {
+        uid: user.uid,
+        email: user.email,
+        nombre: credentials.nombre,
+        phoneNumber: credentials.phoneNumber || null,
+        role: 'user',
+        createdAt: new Date().toISOString(),
+        notificationToken: null, // Puedes actualizar esto más adelante
+      };
+
+      await setDoc(doc(firestoreService, 'users', user.uid), userDoc);
+
+      return getSerializableUser(user);
     } catch (error: FirebaseError | any) {
       const errorMessage = error?.message || 'Error de registro';
       return rejectWithValue(errorMessage);

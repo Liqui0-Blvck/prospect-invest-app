@@ -11,8 +11,6 @@ const { width, height } = Dimensions.get('window')
 const Home = () => {
   const { user } = useAppSelector((state: RootState) => state.auth)
 
-
-
   return (
     <SafeAreaView style={styles.containerSafe}>
       <BackgroundStyle styleOptions={{
