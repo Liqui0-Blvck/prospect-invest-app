@@ -32,7 +32,7 @@ try {
 // Inicializar otros servicios
 const firestoreService = getFirestore(app);
 const storageService = getStorage(app);
-const databaseService = getDatabase(app);
+const realtimeDB  = getDatabase(app);
 
 // Verificar si Firebase fue correctamente inicializado
 const isFirebaseInitialized = app ? true : false;
@@ -42,5 +42,5 @@ export {
   auth,
   firestoreService,
   storageService,
-  databaseService,
+  realtimeDB ,
 };

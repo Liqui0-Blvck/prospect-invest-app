@@ -4,6 +4,7 @@ import prospectReducer from '@/redux/slices/prospects/prospectSlice';
 import interactionReducer from '@/redux/slices/interactions/interactionSlice';
 import sendGridReducer from '@/redux/slices/sendgrid/sendgridSlice';
 import calendarReducer from '@/redux/slices/calendar/calendarSlice';
+import notificationReducer from '@/redux/slices/notifications/notificationsSlice';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { persistReducer, persistStore } from 'redux-persist';
@@ -24,6 +25,7 @@ const rootReducer = {
   interactions: interactionReducer,
   sendgrid: sendGridReducer,
   calendar: calendarReducer,
+  notifications: notificationReducer,
 };
 
 // Configuración del store con redux-persist
