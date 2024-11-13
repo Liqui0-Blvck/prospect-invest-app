@@ -24,7 +24,7 @@ const settings = () => {
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerShown: false, headerTintColor: 'white' });
+    navigation.setOptions({ headerShown: false, headerTintColor: 'black' });
   }, [navigation])
 
   return (
@@ -49,7 +49,7 @@ const settings = () => {
           <Ionicons name="chevron-forward" size={20} color="black" />
         </Pressable>
 
-        <Pressable style={styles.pressableRow}>
+        <Pressable style={styles.pressableRow} onPress={() => router.push('/(configuration)/PasswordChange')}> 
           <Text style={styles.rowText}>Cambiar contraseña</Text>
           <Ionicons name="chevron-forward" size={20} color="black" />
         </Pressable>

@@ -59,11 +59,13 @@ const EditProfile = () => {
           await updateProfileInFirestore(values);
           dispatch(fetchUserData(user?.uid!));
           Alert.alert('Perfil actualizado', 'Tus cambios han sido guardados exitosamente.');
-          navigation.goBack();
+          setTimeout(() => {
+            navigation.goBack();
+          }, 1000)
         } catch (error) {
           console.error('Error al actualizar perfil:', error);
           Alert.alert('Error', 'No se pudo actualizar el perfil.');
-        }
+        }0
       })
     },
   });
@@ -167,7 +169,10 @@ const EditProfile = () => {
             onChangeText={formik.handleChange('address')}
           />
 
-          <Pressable style={styles.submitButton} onPress={() => formik.handleSubmit()}>
+          <Pressable 
+            style={styles.submitButton}
+            disabled={isSubmitting} 
+            onPress={() => formik.handleSubmit()}>
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
