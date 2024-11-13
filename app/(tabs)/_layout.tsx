@@ -14,7 +14,7 @@ type CustomTabBarIconProps = {
 
 const CustomTabBarIcon: React.FC<CustomTabBarIconProps> = ({ name, color, focused }) => {
   return (
-    <View style={{ alignItems: 'center' }}>
+    <View style={[{ alignItems: 'center' },  { position: 'absolute', top: focused ? 5 : 10} ]}>
       <TabBarIcon
         //@ts-ignore 
         name={name} 
@@ -40,9 +40,11 @@ export default function TabLayout() {
   
   return (
     <Tabs
+      
       initialRouteName='index' // Cambia esto para asegurarte que es 'index'
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        animation: 'shift',
         headerShown: false,
         tabBarLabel: () => null, // Ocultar el label del tab
         tabBarStyle: {
@@ -51,10 +53,11 @@ export default function TabLayout() {
           display: 'flex',
           flexDirection: 'row',
           justifyContent: 'space-between',
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
           height: 60,
-          margin: 'auto',
         },
-        tabBarInactiveTintColor: '#C4C4C4',
+        tabBarInactiveTintColor: 'black',
       }}
     >
       <Tabs.Screen

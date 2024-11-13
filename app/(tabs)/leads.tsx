@@ -1,6 +1,7 @@
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SearchInput from '@/components/SearchInput';
-import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, FlatList, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { Colors, ColorsNative } from '@/constants/Colors';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -23,6 +24,8 @@ import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
 import { useLoadingSkeleton } from '@/hooks/useLoadingSkeleton';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+
+const { height } = Dimensions.get('window');
 
 const data = [
   { label: 'Interesado', value: 'interesado' },
@@ -64,9 +67,49 @@ const getStatusColor = (estado: string) => {
 };
 
 const Leads = () => {
+  const { user } = useAppSelector((state: RootState) => state.auth);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const [isFocus, setIsFocus] = useState(false);
+  const { leads, hasMore: hasMoreData, loading: loadingLeads } = useAppSelector((state: RootState) => state.lead)
+  const { showSkeleton } = useLoadingSkeleton(loadingLeads, 2000)
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const filterBottomSheetRef = useRef<BottomSheet>(null);
+  const filterSnapPoints = useMemo(() => ['1%', '40%'], []);
+  const [modalDeleteVisible, setModalDeleteVisible] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<LeadToDelete>({ id: null, index: null });
+  // Snap points para el BottomSheet
+  const BottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = useMemo(() => ['1%','25%', '30%'], []);
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const swipeableRefs = useRef<(Swipeable | null)[]>([]);
+  const [isFocused, setIsFocused] = useState(false);
 
+  // control de estados y lista de leads
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const pageSize = 15;
+
+
+  // Estados para el modal de confirmacion
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentLead, setCurrentLead] = useState<Lead | null>(null)
+
+  // Estado para la búsqueda actual
+  const [currentSearch, setCurrentSearch] = useState('');
+    // Ref para almacenar el timer del debounce
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+
+
+  
   // animación de pulso
+  const dispatch = useAppDispatch();
   const pulse = useSharedValue(1);
+  const router = useRouter();
+  const navigator = useNavigation();
+  const today = new Date();
 
   // Iniciar la animación de pulso al montar el componente
   useEffect(() => {
@@ -80,8 +123,7 @@ const Leads = () => {
 
 
 
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
-  const [isFocus, setIsFocus] = useState(false);
+
 
   const handleDropdownChange = (item: any) => {
     if (selectedValues.includes(item.value)) {
@@ -125,11 +167,7 @@ const Leads = () => {
 
   
 
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
 
-  const filterBottomSheetRef = useRef<BottomSheet>(null);
-  const filterSnapPoints = useMemo(() => ['1%', '40%'], []);
 
   const openFilterSheet = () => {
     setFilterVisible(true);
@@ -156,57 +194,17 @@ const Leads = () => {
   
 
 
-  const [modalDeleteVisible, setModalDeleteVisible] = useState(false);
-  const [leadToDelete, setLeadToDelete] = useState<LeadToDelete>({ id: null, index: null });
 
 
   // Hooks de navegación
-  const router = useRouter();
-  const navigator = useNavigation();
-  
-  
-  // obtencion de informacion desde el store
-  const dispatch = useAppDispatch();
-  const { user } = useAppSelector((state: RootState) => state.auth);
-  const { leads, hasMore: hasMoreData, loading: loadingLeads } = useSelector((state: RootState) => state.lead)
-  const { showSkeleton } = useLoadingSkeleton(loadingLeads, 2000)
 
-  // Snap points para el BottomSheet
-  const BottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => ['1%','25%', '30%'], []);
-  const [showBottomSheet, setShowBottomSheet] = useState(false);
-
-
-  const today = new Date();
 
 
 
 
   
   // Swipe ref para cada elemento de la lista
-  const swipeableRefs = useRef<(Swipeable | null)[]>([]);
 
-  const [isFocused, setIsFocused] = useState(false);
-
-
-  // control de estados y lista de leads
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const pageSize = 15;
-
-
-  // Estados para el modal de confirmacion
-  const [modalVisible, setModalVisible] = useState(false);
-  const [currentLead, setCurrentLead] = useState<Lead | null>(null)
-
-
-  // Estado para la búsqueda actual
-  const [currentSearch, setCurrentSearch] = useState('');
-
-
-    // Ref para almacenar el timer del debounce
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
  // Cargar la primera página
   const loadFirstPage = async (searchValue?: string) => {
@@ -347,6 +345,7 @@ const Leads = () => {
     };
   }, []);
 
+
   const handleConfirm = (result: string) => {
     if (currentLead) {
       const uid = generateUID();
@@ -378,12 +377,13 @@ const Leads = () => {
 
 
 
+
   return (
-    <SafeAreaView style={styles.container}>
-      <BackgroundStyle 
+    <View>
+      <BackgroundStyle
         styleOptions={{
           backgroundDesign: {
-            height: '49%',
+            height: height * 0.45,
             paddingVertical: 10,
             borderBottomLeftRadius: 20,
             borderBottomRightRadius: 20,
@@ -411,7 +411,7 @@ const Leads = () => {
          </View>
         }
         />
-
+        
         {
           showSkeleton
             ? (
@@ -494,65 +494,6 @@ const Leads = () => {
               />
             )
         }
-
-        {showBottomSheet && (
-        <BottomSheet
-          ref={BottomSheetRef}
-          onChange={handleSheetChanges}
-          index={2}
-          snapPoints={snapPoints}
-        >
-          <BottomSheetView style={styles.contentContainerSheet}>
-            <View style={styles.contentSheet}>
-              <Text style={{
-                fontSize: 20,
-                fontWeight: 'bold',
-                textAlign: 'center',
-                marginVertical: 5
-              }}>Agregar Prospectos</Text>
-              <FlatList
-                data={optionsLeads}
-                keyExtractor={(item) => item.title}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderWidth: 1,
-                      borderColor: ColorsNative.text[100],
-                      width: '100%',
-                      padding: 10,
-                      borderRadius: 10,
-                      backgroundColor: ColorsNative.text[100],
-                      marginVertical: 2
-                    }}
-                    onPress={() => {
-                      setShowBottomSheet(false);
-                      if (item.title === 'Agregar Leads Excel') {
-                        router.push('/(leads)/ExcelLeads');
-                      } else {
-                        router.push('/(leads)/AddLead');
-                      }
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <MaterialCommunityIcons
-                        //@ts-ignore
-                        name={item.icon}
-                        size={24}
-                        color={item.color}
-                      />
-                      <Text style={{ marginLeft: 10 }}>{item.title}</Text>
-                    </View>
-                  </Pressable>
-                )}
-
-              />
-            </View>
-          </BottomSheetView>
-        </BottomSheet>
-      )}
 
       <CallConfirmationModal
         visible={modalVisible}
@@ -665,10 +606,10 @@ const Leads = () => {
   )
   }
 
-    </SafeAreaView>
-      
+    </View>
   );
-};
+}
+
 
 const modalStyle = StyleSheet.create({
   modalBackground: {
@@ -716,7 +657,7 @@ const styles = StyleSheet.create({
   },
   searchAndButtonContainer: {
     position: 'relative',
-    top: 30,
+    top: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -757,7 +698,7 @@ const styles = StyleSheet.create({
   },
   leadsCard: {
     position: 'relative',
-    top: 110,
+    top: 80,
     height: '100%',
     marginHorizontal: 10,
     backgroundColor: ColorsNative.text[100],
@@ -925,7 +866,4 @@ const skeletonStyle = StyleSheet.create({
   }
 })
 
-
 export default Leads;
-
-

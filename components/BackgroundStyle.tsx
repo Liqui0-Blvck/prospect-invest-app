@@ -1,7 +1,8 @@
 import { ColorsNative } from '@/constants/Colors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { FC, ReactNode } from 'react';
-import { StyleSheet, Text, View, ViewStyle, TextStyle, StatusBar } from 'react-native';
+import { StatusBar } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle, TextStyle } from 'react-native';
 
 interface BackgroundStyleProps {
   title?: string;
@@ -18,6 +19,7 @@ const BackgroundStyle: FC<BackgroundStyleProps> = ({ title, icons, styleOptions,
   return (
     <>
       <StatusBar
+        backgroundColor={ColorsNative.background[200]} // Cambia el color de la barra de estado
         barStyle="light-content"  // Puedes usar 'dark-content' o 'light-content'
       />
       <View style={[styles.backgroundDesign, styleOptions?.backgroundDesign]}>

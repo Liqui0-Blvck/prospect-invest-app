@@ -2,6 +2,7 @@
   "expo": {
     "name": "prospect-invest-app",
     "slug": "invest-lead",
+    "newArchEnabled"  : true,
     "version": "1.0.0",
     "extra": {
       "eas": {

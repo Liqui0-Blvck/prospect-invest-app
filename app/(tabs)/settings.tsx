@@ -24,10 +24,7 @@ const settings = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <BackgroundStyle 
-        title="Configuración" 
-        icons={<Ionicons name="settings" size={40} color="white" />} 
-      />
+      
       <ScrollView style={styles.settingsContainer} contentContainerStyle={{ paddingBottom: 30 }}>
         {/* Perfil */}
         <View style={styles.profileContainer}>
