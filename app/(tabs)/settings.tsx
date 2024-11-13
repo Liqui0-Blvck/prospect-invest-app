@@ -1,12 +1,14 @@
 import Layout from '@/components/Layout'
 import React, { useEffect, useLayoutEffect, useState } from 'react'
-import { SafeAreaView, ScrollView, StyleSheet, Text, View, Pressable, Switch, Image } from 'react-native'
+import { SafeAreaView, ScrollView, StyleSheet, Text, View, Pressable, Switch, Image, Dimensions } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import BackgroundStyle from '@/components/BackgroundStyle';
 import { fetchUserData, logout } from '@/redux/slices/auth/authSlice';
 import { RootState, useAppDispatch, useAppSelector } from '@/redux/store';
+
+const { height } = Dimensions.get('window');
 
 const settings = () => {
   const [pushNotifications, setPushNotifications] = useState(false);
@@ -29,8 +31,30 @@ const settings = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <BackgroundStyle
+        title="Configuración" 
+        icons={<Ionicons name="settings" size={30} color="white" />}
+        styleOptions={{
+          backgroundDesign: {
+            height: height * 0.45,
+            paddingVertical: 10,
+            borderBottomLeftRadius: 20,
+            borderBottomRightRadius: 20,
+            zIndex: -3
+          },
+          headerContainer: {
+            paddingTop: 20,
+          }
+          
+        }}>
+          <View style={{
+
+          }}>
+
+          </View>
+        </BackgroundStyle>
       
-      <ScrollView style={styles.settingsContainer} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView style={styles.settingsContainer} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Perfil */}
         <View style={styles.profileContainer}>
           <Image source={{ uri: user?.photoURL ? user.photoURL : 'https://via.placeholder.com/120' }} style={styles.profileImage} />
@@ -104,14 +128,15 @@ const settings = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
   },
   
   settingsContainer: {
-    marginTop: 130,
+    height: height * 0.095,
+    position: 'relative',
+    top: 78,
     borderRadius: 10,
     flex: 1,
-    marginHorizontal: 15,
+    marginHorizontal: 10,
     backgroundColor: 'white',
     paddingHorizontal: 10,
     paddingVertical: 20,
@@ -136,8 +161,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   profileImage: {
-    width: 50,
-    height: 50,
+    width: 70,
+    height: 70,
     borderRadius: 25,
     marginRight: 10,
   },

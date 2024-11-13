@@ -67,11 +67,9 @@ const LeadDetail = () => {
 
   const { showSkeleton } = useLoadingSkeleton(loadingLeads, 500);
 
-
   const { interactions, loading: loadingInteracion } = useSelector((state: RootState) => state.interactions);
   const { notes, loading: loadingNotes } = useSelector((state: RootState) => state.lead);
-  const { user } = useSelector((state: RootState) => state.auth)
-
+  const { user } = useAppSelector((state: RootState) => state.auth);
 
 
   // Estados de llamada
@@ -118,16 +116,18 @@ const LeadDetail = () => {
   }));
 
 
-
-
   // Obtener interacciones y notas
   useEffect(() => {
-    dispatch(getInteractionsLead({ userID: user?.uid!, leadID: id }));
-  }, [])
+    if (user?.uid) {
+      dispatch(getInteractionsLead({ userID: user?.uid, leadID: id }));
+    }
+  }, [user?.uid])
 
   useEffect(() => {
-    dispatch(getNotesByLead({ leadID: id, userID: user?.uid! }));
-  }, [])
+    if (user?.uid) {
+      dispatch(getNotesByLead({ leadID: id, userID: user?.uid }));
+    }
+  }, [user])
 
 
   // Configuración de la barra de navegación

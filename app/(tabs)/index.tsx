@@ -4,18 +4,17 @@ import { interacciones, stats } from '@/mocks/leads'
 import { RootState, useAppSelector } from '@/redux/store'
 import React from 'react'
 import { Dimensions, SafeAreaView, StyleSheet, Text, View, ScrollView, Platform, StatusBar } from 'react-native'
-import { useSelector } from 'react-redux'
 
 const { width, height } = Dimensions.get('window')
 
 const Home = () => {
   const { user } = useAppSelector((state: RootState) => state.auth)
-
+  
   return (
     <SafeAreaView style={styles.containerSafe}>
       <BackgroundStyle styleOptions={{
         backgroundDesign: {
-          height: '52%',
+          height: height * 0.47,
           paddingVertical: 10,
           borderBottomLeftRadius: 20,
           borderBottomRightRadius: 20,
@@ -27,7 +26,7 @@ const Home = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.welcomeTitleContainer}>
-          <Text style={styles.welcomeTitle}>Bienvenid@ Aracelly</Text>
+          <Text style={styles.welcomeTitle}>Bienvenid@ {user?.displayName}</Text>
         </View>
 
         <View style={styles.containerStats}>
@@ -64,19 +63,17 @@ const Home = () => {
 const styles = StyleSheet.create({
   containerSafe: {
     flex: 1,
-    backgroundColor: ColorsNative.text[100],
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // Ajuste de altura en Android
   },
   header: {
-    height: height * 0.092, // Dinámico según la altura del dispositivo
+    height: height * 0.070, // Dinámico según la altura del dispositivo
     justifyContent: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
     paddingHorizontal: 20,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 'bold',
     color: ColorsNative.text[100],
     textAlign: 'center',
@@ -90,8 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   welcomeTitleContainer: {
-    marginTop: 20,
-    marginBottom: 15,
+    marginVertical: 10,
   },
   welcomeTitle: {
     fontSize: 24,
@@ -101,7 +97,6 @@ const styles = StyleSheet.create({
   containerStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 10,
     backgroundColor: '#ffffff',
     paddingVertical: 15,
     borderRadius: 10,

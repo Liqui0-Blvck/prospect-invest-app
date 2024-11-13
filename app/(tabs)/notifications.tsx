@@ -1,6 +1,6 @@
 import BackgroundStyle from '@/components/BackgroundStyle';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Pressable, FlatList, RefreshControl } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Pressable, FlatList, RefreshControl, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener instalado @expo/vector-icons
 import { ColorsNative } from '@/constants/Colors';
@@ -8,6 +8,8 @@ import BottomSheet from '@/components/BottomSheet';
 import { fetchNotifications } from '@/redux/slices/notifications/notificationsSlice';
 import useNotificationsListener from '@/hooks/useNotificationListener';
 import { RootState, useAppDispatch, useAppSelector } from '@/redux/store';
+
+const { height } = Dimensions.get('window');
 
 
 
@@ -19,27 +21,6 @@ const Notifications = () => {
 
   useNotificationsListener();
 
-  // Renderiza el skeleton de carga
-  const renderLoadingSkeleton = () => (
-    <View style={styles.notificationContainer}>
-      <View style={styles.notificationContent}>
-        <Text style={styles.notificationTitle}>Cargando...</Text>
-        <Text style={styles.notificationDescription}>Cargando...</Text>
-      </View>
-      <View style={[styles.notificationLine, { backgroundColor: '#1E90FF' }]} />
-    </View>
-  );
-
-  // Renderiza una notificación
-  const renderNotification = ({ item }: { item: Notification }) => (
-    <View style={styles.notificationContainer} key={item.tag}>
-      <View style={styles.notificationContent}>
-        <Text style={styles.notificationTitle}>{item.title}</Text>
-        <Text style={styles.notificationDescription}>{item.body}</Text>
-      </View>
-      <View style={[styles.notificationLine, { backgroundColor: item.tag === 'reminder' ? '#FF6347' : '#1E90FF' }]} />
-    </View>
-  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -56,7 +37,7 @@ const Notifications = () => {
       <BackgroundStyle
         styleOptions={{
           backgroundDesign: {
-            height: '52%',
+            height: height * 0.47,
             paddingVertical: 10,
             borderBottomLeftRadius: 20,
             borderBottomRightRadius: 20,
@@ -69,23 +50,46 @@ const Notifications = () => {
       </View>
 
       
-      <FlatList
-        style={styles.scrollContainer}
-        data={loading ? Array.from({ length: 5 }, (_, index) => ({ id: `loading-${index}` })) : notifications}
-        keyExtractor={(item, index) => loading ? `loading-${index}` : item.tag}
-        renderItem={loading ? () => renderLoadingSkeleton() : renderNotification}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ColorsNative.text[100]} />
-        }
-        ListEmptyComponent={
-          !loading && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No hay notificaciones disponibles</Text>
+      {
+        loading ? (
+          Array.from({ length: 5 }).map((_, index) => (
+            <View style={styles.notificationContainer} key={`loading-${index}`}>
+              <View style={styles.notificationContent}>
+                <Text style={styles.notificationTitle}>Cargando...</Text>
+                <Text style={styles.notificationDescription}>Cargando...</Text>
+              </View>
+              <View style={[styles.notificationLine, { backgroundColor: '#1E90FF' }]} />
             </View>
-          )
-        }
-      />
+          ))
+        ) : (
+          <FlatList
+            style={styles.scrollContainer}
+            data={notifications}
+            keyExtractor={(item) => item.id!}
+            renderItem={({ item }) => (
+              <View style={styles.notificationContainer} key={item.id}>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>{item.title}</Text>
+                  <Text style={styles.notificationDescription}>{item.body}</Text>
+                </View>
+                <View style={[styles.notificationLine, { backgroundColor: item.type === 'reminder' ? '#FF6347' : '#1E90FF' }]} />
+              </View>
+            )}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ColorsNative.text[100]} />
+            }
+            ListEmptyComponent={
+              !loading && (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No hay notificaciones disponibles</Text>
+                </View>
+              )
+            }
+          />
+        )
+      }
+
     </SafeAreaView>
   );
 }
@@ -93,10 +97,9 @@ const Notifications = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ColorsNative.text[100],
   },
   header: {
-    height: 80,
+    height: 70,
     paddingVertical: 10,
     paddingHorizontal: 20,
     justifyContent: 'center',
@@ -121,7 +124,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    margin: 10,
+    marginHorizontal: 10,
     padding: 5,
     borderRadius: 10,
     backgroundColor: ColorsNative.text[100],

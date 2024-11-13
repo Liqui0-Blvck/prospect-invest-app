@@ -47,6 +47,8 @@ export const getInteractionsLead = createAsyncThunk(
         ...doc.data(),
       })) as Interaction[];
 
+      console.log(interactions)
+
       return interactions;
     } catch (error: any) {
       console.error('Error al obtener las interacciones:', error);

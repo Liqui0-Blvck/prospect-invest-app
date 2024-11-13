@@ -44,7 +44,6 @@ const Calendar = () => {
     dispatch(fetchEventos())
   }, [] )
 
-  console.log(eventos)
 
 
   // Obtener la fecha actual

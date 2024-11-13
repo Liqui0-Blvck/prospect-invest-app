@@ -70,7 +70,8 @@ export const getLead = createAsyncThunk<Lead, string | string[], { rejectValue: 
       }
 
       const lead = querySnapshot.docs[0].data() as Lead;
-      return { ...lead, id: querySnapshot.docs[0].id }; // Incluye el ID del documento en el resultado
+
+      return lead
     } catch (error: any) {
       console.error(`Error al obtener el lead con leadId ${leadID}:`, error);
       return rejectWithValue('Error al obtener el lead.');
@@ -132,9 +133,10 @@ export const fetchLeads = createAsyncThunk<FetchLeadsResult, FetchLeadsParams>(
         limit(pageSize)
       );
 
+
       // Aplicar filtro de búsqueda si existe
       if (search) {
-        q = query(q, where('nombre', '>=', search), where('nombre', '<=', search + '\uf8ff'));
+        q = query(q, where('nombre', '>=', search.toLowerCase()), where('nombre', '<=', search.toLowerCase() + '\uf8ff'));
       }
 
       // Aplicar filtros adicionales si existen
