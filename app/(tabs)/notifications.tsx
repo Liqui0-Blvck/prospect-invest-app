@@ -32,7 +32,7 @@ const Notifications = () => {
 
   // Renderiza una notificación
   const renderNotification = ({ item }: { item: Notification }) => (
-    <View style={styles.notificationContainer}>
+    <View style={styles.notificationContainer} key={item.tag}>
       <View style={styles.notificationContent}>
         <Text style={styles.notificationTitle}>{item.title}</Text>
         <Text style={styles.notificationDescription}>{item.body}</Text>
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: ColorsNative.text[100],
   },
   header: {
-    height: 90,
+    height: 80,
     paddingVertical: 10,
     paddingHorizontal: 20,
     justifyContent: 'center',

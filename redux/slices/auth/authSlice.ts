@@ -3,7 +3,7 @@ import { FirebaseError } from 'firebase/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, firestoreService } from '@/firebase'; // Asegúrate de que el auth aquí esté configurado con initializeAuth
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut,updateProfile  } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
 // Define el estado inicial
 interface AuthState {
@@ -14,16 +14,17 @@ interface AuthState {
   rememberMe: boolean; // Nuevo campo para recordar la sesión
 }
 
-interface SerializableUser {
+export interface SerializableUser {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
   phoneNumber: string | null;
-  nombre?: string;
+  name?: string;
   role?: string;
   createdAt?: string;
   notificationToken?: string;
+  address?: string;
 }
 
 const getSerializableUser = (user: any): SerializableUser => ({
@@ -32,10 +33,11 @@ const getSerializableUser = (user: any): SerializableUser => ({
   displayName: user.displayName,
   photoURL: user.photoURL,
   phoneNumber: user.phoneNumber,
-  nombre: user.nombre,
+  name: user.name,
   role: user.role,
   createdAt: user.createdAt,
   notificationToken: user.notificationToken,
+  address: user.address,
 });
 
 const initialState: AuthState = {
@@ -72,23 +74,75 @@ const removeUserFromStorage = async () => {
   await AsyncStorage.removeItem('user');
 };
 
+export const fetchUserData = createAsyncThunk<
+  SerializableUser | null,
+  string,
+  { rejectValue: string }
+>(
+  'auth/fetchUserData',
+  async (userId, { rejectWithValue, dispatch }) => {
+    try {
+      // Referencia al documento del usuario en Firestore
+      const userDocRef = doc(firestoreService, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as SerializableUser;
+
+        // Actualizar el estado de Redux con los datos del usuario
+        dispatch(setUser(userData));
+
+        return userData;
+      } else {
+        console.warn('Documento del usuario no encontrado en Firestore.');
+        return null;
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Error al obtener datos del usuario';
+      console.error(errorMessage);
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
 // Login
-export const login = createAsyncThunk<SerializableUser | null, Credentials, { rejectValue: string }>(
+export const login = createAsyncThunk<
+  SerializableUser | null,
+  Credentials,
+  { rejectValue: string }
+>(
   'auth/login',
   async (credentials, { rejectWithValue, dispatch }) => {
     try {
-      const auth = getAuth(); // Obtener la instancia de auth
+      const auth = getAuth();
       const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
       const user = getSerializableUser(userCredential.user);
 
-      // Guardar usuario en AsyncStorage si rememberMe está activado
-      if (user) {
-        await saveUserToStorage(user);
-        dispatch(rememberMeAction(true)); // Actualizar el estado de rememberMe
+      if (!user) {
+        throw new Error('No se pudo obtener la información del usuario.');
       }
 
-      return user;
-    } catch (error: FirebaseError | any) {
+      // Obtener datos adicionales del usuario desde Firestore
+      const userDocRef = doc(firestoreService, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const additionalData = userDoc.data();
+        const completeUser = {
+          ...user,
+          ...additionalData,
+        } as SerializableUser;
+
+        // Guardar el usuario en AsyncStorage si 'rememberMe' está activado
+        await saveUserToStorage(completeUser);
+        dispatch(rememberMeAction(true)); // Actualizar el estado de rememberMe
+
+        return completeUser;
+      } else {
+        console.warn('Documento de usuario no encontrado en Firestore.');
+        return user;
+      }
+    } catch (error: any) {
       const errorMessage = error?.message || 'Error desconocido al iniciar sesión';
       return rejectWithValue(errorMessage);
     }
@@ -160,6 +214,9 @@ const authSlice = createSlice({
     rememberMeAction(state: AuthState, action: PayloadAction<boolean>) {
       state.rememberMe = action.payload;
     },
+    setUser(state, action: PayloadAction<SerializableUser | null>) {
+      state.user = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -199,7 +256,12 @@ const authSlice = createSlice({
 });
 
 // Action para cargar usuario desde AsyncStorage
-export const { resetError, loadUserFromStorageAction, rememberMeAction } = authSlice.actions;
+export const { 
+  resetError, 
+  loadUserFromStorageAction, 
+  rememberMeAction,
+  setUser
+} = authSlice.actions;
 
 // Thunk para cargar usuario de AsyncStorage al iniciar la app
 export const loadUserFromStorageThunk = () => async (dispatch: any) => {

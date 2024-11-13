@@ -31,7 +31,6 @@ const App = () => {
   useEffect(() => {
     const registerForNotifications = async () => {
       const token = await registerForPushNotificationsAsync();
-      console.log('Expo Push Token:', token);
 
       if (token && user) {
         await saveTokenToFirestore(user.uid, token);

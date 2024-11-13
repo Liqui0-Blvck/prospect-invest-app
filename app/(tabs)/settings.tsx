@@ -5,8 +5,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import BackgroundStyle from '@/components/BackgroundStyle';
-import { logout } from '@/redux/slices/auth/authSlice';
-import { useAppDispatch } from '@/redux/store';
+import { fetchUserData, logout } from '@/redux/slices/auth/authSlice';
+import { RootState, useAppDispatch, useAppSelector } from '@/redux/store';
 
 const settings = () => {
   const [pushNotifications, setPushNotifications] = useState(false);
@@ -14,12 +14,17 @@ const settings = () => {
   const navigation = useNavigation()
   const dispatch = useAppDispatch()
   const router = useRouter()
+  const { user } = useAppSelector((state: RootState) => state.auth)
+
+  useEffect(() => {
+    dispatch(fetchUserData(user?.uid!));
+  }, [])
 
   const togglePushNotifications = () => setPushNotifications(!pushNotifications);
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerShown: false, headerTintColor: 'white' });
+    navigation.setOptions({ headerShown: false, headerTintColor: 'black' });
   }, [navigation])
 
   return (
@@ -28,29 +33,30 @@ const settings = () => {
       <ScrollView style={styles.settingsContainer} contentContainerStyle={{ paddingBottom: 30 }}>
         {/* Perfil */}
         <View style={styles.profileContainer}>
-          <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.profileImage} />
-          <Text style={styles.profileName}>Yennefer Doe</Text>
+          <Image source={{ uri: user?.photoURL ? user.photoURL : 'https://via.placeholder.com/120' }} style={styles.profileImage} />
+          <Text style={styles.profileName}>{user?.displayName}</Text>
         </View>
 
         {/* Sección de Configuración */}
-        <Text style={styles.sectionHeader}>Account Settings</Text>
+        <Text style={styles.sectionHeader}>Configuración de cuenta</Text>
 
-        <Pressable style={styles.pressableRow}>
-          <Text style={styles.rowText}>Edit profile</Text>
+        <Pressable style={styles.pressableRow}
+          onPress={() => router.push('/(configuration)/EditProfile')}>
+          <Text style={styles.rowText}>Editar Perfil</Text>
+          <Ionicons name="chevron-forward" size={20} color="black" />
+        </Pressable>
+
+        <Pressable style={styles.pressableRow} onPress={() => router.push('/(configuration)/PasswordChange')}> 
+          <Text style={styles.rowText}>Cambiar contraseña</Text>
           <Ionicons name="chevron-forward" size={20} color="black" />
         </Pressable>
 
         <Pressable style={styles.pressableRow}>
-          <Text style={styles.rowText}>Change password</Text>
-          <Ionicons name="chevron-forward" size={20} color="black" />
-        </Pressable>
-
-        <Pressable style={styles.pressableRow}>
-          <Text style={styles.rowText}>Add a payment method</Text>
+          <Text style={styles.rowText}>Notificaciones</Text>
           <Ionicons name="add" size={20} color="black" />
         </Pressable>
 
-        <View style={styles.switchRow}>
+        {/* <View style={styles.switchRow}>
           <Text style={styles.rowText}>Push notifications</Text>
           <Switch
             trackColor={{ false: "#767577", true: "#81b0ff" }}
@@ -58,7 +64,7 @@ const settings = () => {
             onValueChange={togglePushNotifications}
             value={pushNotifications}
           />
-        </View>
+        </View> */}
 
         <View style={styles.switchRow}>
           <Text style={styles.rowText}>Dark mode</Text>
@@ -71,7 +77,7 @@ const settings = () => {
         </View>
 
         {/* Sección de Información */}
-        <Text style={styles.sectionHeader}>More</Text>
+        <Text style={styles.sectionHeader}>Más</Text>
 
         <Pressable style={styles.pressableRow}>
           <Text style={styles.rowText}>About us</Text>
