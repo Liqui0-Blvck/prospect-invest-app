@@ -6,6 +6,8 @@ import { getDatabase } from 'firebase/database';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+console.log(process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET)
+
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
