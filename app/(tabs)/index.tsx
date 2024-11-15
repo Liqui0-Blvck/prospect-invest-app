@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // Ajuste de altura en Android
   },
   header: {
-    height: height * 0.070, // Dinámico según la altura del dispositivo
+    height: height * 0.060, // Dinámico según la altura del dispositivo
     justifyContent: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',

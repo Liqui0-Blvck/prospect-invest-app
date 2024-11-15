@@ -75,9 +75,11 @@ const settings = () => {
           <Ionicons name="chevron-forward" size={20} color="black" />
         </Pressable>
 
-        <Pressable style={styles.pressableRow}>
+        <Pressable 
+          style={styles.pressableRow}
+          onPress={() => router.push('/(configuration)/NotificationConfig')}>
           <Text style={styles.rowText}>Notificaciones</Text>
-          <Ionicons name="add" size={20} color="black" />
+          <Ionicons name="chevron-forward" size={20} color="black" />
         </Pressable>
 
         {/* <View style={styles.switchRow}>
@@ -99,19 +101,6 @@ const settings = () => {
             value={darkMode}
           />
         </View>
-
-        {/* Sección de Información */}
-        <Text style={styles.sectionHeader}>Más</Text>
-
-        <Pressable style={styles.pressableRow}>
-          <Text style={styles.rowText}>About us</Text>
-          <Ionicons name="chevron-forward" size={20} color="black" />
-        </Pressable>
-
-        <Pressable style={styles.pressableRow}>
-          <Text style={styles.rowText}>Privacy policy</Text>
-          <Ionicons name="chevron-forward" size={20} color="black" />
-        </Pressable>
 
         <Pressable onPress={() => {
           dispatch(logout()).unwrap().then(() => {

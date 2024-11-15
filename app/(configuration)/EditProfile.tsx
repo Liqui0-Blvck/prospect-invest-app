@@ -188,7 +188,7 @@ const EditProfile = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#eee',
+    backgroundColor: 'white',
   },
   scrollContainer: {
     gap: 20,
